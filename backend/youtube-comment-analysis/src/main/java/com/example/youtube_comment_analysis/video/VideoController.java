@@ -13,16 +13,23 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @RequestMapping("/video")
 public class VideoController {
-	
+
 	private final VideoService videoService;
 
 	@GetMapping("/{videoId}")
-	public ResponseEntity<?> getVideoData(@PathVariable("videoId") String videoId, 
-			@RequestParam(name = "limit", required = false) Integer limit){
-		
+	public ResponseEntity<?> getVideoData(@PathVariable("videoId") String videoId,
+										  @RequestParam(name = "limit", required = false) Integer limit){
+
 		int requested=(limit==null? 100 : limit);
 		int normalized = Math.min(1000, Math.max(100, requested));
-		
+
 		return ResponseEntity.ok(videoService.getVideoData(videoId, normalized));
+	}
+
+	// --- 분석 API 엔드포인트 추가 ---
+	@GetMapping("/{videoId}/analysis")
+	public ResponseEntity<AnalysisDto> getVideoAnalysis(@PathVariable("videoId") String videoId) {
+		// VideoService에 있는 분석 메소드를 호출하고, 그 결과를 반환합니다.
+		return ResponseEntity.ok(videoService.analyzeCommentsActivity(videoId));
 	}
 }
