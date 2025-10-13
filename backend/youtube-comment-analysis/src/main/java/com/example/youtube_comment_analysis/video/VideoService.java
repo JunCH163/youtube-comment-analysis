@@ -118,13 +118,15 @@ public class VideoService {
                         String text = cs.path("textDisplay").asText(null);
                         long likeCount = cs.path("likeCount").asLong(0);
                         String publishedAt = cs.path("publishedAt").asText(null);
+                        Integer prediction=0;
 
                         comments.add(new CommentDto(
                                 commentId,
                                 author,
                                 text,
                                 likeCount,
-                                publishedAt
+                                publishedAt,
+                                prediction
                         ));
                     }
                 }
@@ -137,10 +139,7 @@ public class VideoService {
             }
 
             // --- AI Sender 호출 (FastAPI와 연동) ---
-            var commentList = comments.stream()
-                    .map(c -> new AiSender.CommentLite(c.getCommentId(), c.getText()))
-                    .toList();
-            var sendResult = aiSender.send(commentList);
+            var sendResult = aiSender.send(comments);
             log.info("FastAPI sendOnly result: success={}, clientError={}, otherError={}",
                     sendResult.success(), sendResult.clientError(), sendResult.otherError());
             

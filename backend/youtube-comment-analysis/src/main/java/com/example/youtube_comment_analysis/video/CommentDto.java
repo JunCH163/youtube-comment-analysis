@@ -14,4 +14,5 @@ public class CommentDto {
     private String text;
     private Long likeCount;
     private String publishedAt;
+    private Integer prediction;
 }

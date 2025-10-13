@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import com.example.youtube_comment_analysis.video.CommentDto;
+
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -36,28 +38,27 @@ public class AiSender {
 	@Value("${fastapi.max-batch:500}")
     private int maxBatch;
 	
-	public record CommentLite(String id, String text) {}
 	
-	public SendResult send(List<CommentLite> comments) {
+	public SendResult send(List<CommentDto> comments) {
 		if(comments==null || comments.isEmpty())
 			return new SendResult(0,0,0);
 		
 		comments = comments.stream()
-                .filter(c -> c.text() != null && !c.text().isBlank())
+                .filter(c -> c.getText() != null && !c.getText().isBlank())
                 .toList();
 		
 		if (comments.isEmpty()) 
 			return new SendResult(0, 0, 0);
 		
-		List<List<CommentLite>> batches = chunk(comments, Math.max(1, maxBatch));
+		List<List<CommentDto>> batches = chunk(comments, Math.max(1, maxBatch));
 		String requestId = UUID.randomUUID().toString();
 		
 		int ok = 0, fail4xx = 0, failOther = 0;
 		
-		for(List<CommentLite> batch:batches) {
+		for(List<CommentDto> batch:batches) {
 			String etag=sha256For(batch);
 			var req=new AiSentimentRequest(batch.stream()
-					.map(c->new AiSentimentRequest.Comment(c.id(),c.text()))
+					.map(c->new AiSentimentRequest.Comment(c.getCommentId(), c.getAuthor(),c.getText(), c.getLikeCount(), c.getPublishedAt(),c.getPrediction()))
 					.toList(), 
 					new AiSentimentRequest.Trace(requestId, etag));
 			try {
@@ -99,20 +100,20 @@ public class AiSender {
 	
 	 public record SendResult(int success, int clientError, int otherError) {}
 	 
-	 private static List<List<CommentLite>> chunk(List<CommentLite> list, int size) {
-	        List<List<CommentLite>> out = new ArrayList<>();
+	 private static List<List<CommentDto>> chunk(List<CommentDto> list, int size) {
+	        List<List<CommentDto>> out = new ArrayList<>();
 	        for (int i = 0; i < list.size(); i += size) {
 	            out.add(list.subList(i, Math.min(i + size, list.size())));
 	        }
 	        return out;
 	    }
 	 
-	 private static String sha256For(List<CommentLite> comments) {
+	 private static String sha256For(List<CommentDto> comments) {
 	        try {
 	            MessageDigest md = MessageDigest.getInstance("SHA-256");
 	            String payload = comments.stream()
-	                    .sorted(Comparator.comparing(CommentLite::id))
-	                    .map(c -> c.id() + ":" + (c.text() == null ? 0 : c.text().length()))
+	            		.sorted(Comparator.comparing(CommentDto::getCommentId))
+	            		.map(c -> c.getCommentId() + ":" + (c.getText() == null ? 0 : c.getText().length()))
 	                    .collect(Collectors.joining("|"));
 	            byte[] digest = md.digest(payload.getBytes(StandardCharsets.UTF_8));
 	            StringBuilder sb = new StringBuilder();
