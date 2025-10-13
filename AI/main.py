@@ -8,11 +8,15 @@ from analysis.sentiment_analyzer import SentimentPredictor
 # --- 1. 데이터 유효성 검사를 위한 모델 정의 (Pydantic) ---
 class Comment(BaseModel):
     id: str
+    author: str
     text: str
+    likeCount: int
+    publishedAt: str
+    prediction: int
 
 class Trace(BaseModel):
     requestId: str
-    etag: str
+    analysisETag: str
 
 class AnalysisRequest(BaseModel):
     comments: List[Comment]
@@ -35,20 +39,13 @@ def analyze_comments(request: AnalysisRequest):
     predicted_labels = sentiment_predictor.predict(comment_texts)
     
     # 결과 병합
-    response_comments = []
     for i, comment in enumerate(comment_objects):
-        comment_dict = comment.model_dump()
-        comment_dict['sentiment_label'] = predicted_labels[i]
-        response_comments.append(comment_dict)
+        comment.prediction = predicted_labels[i]
     
     # 최종 응답 객체 생성
     final_response = {
-        "comments": response_comments,
+        "comments": [c.model_dump() for c in comment_objects],
         "trace": request.trace.model_dump()
     }
     
     return final_response
-
-@app.get("/")
-def health_check():
-    return {"status": "OK", "message": "Sentiment Analysis Server is running."}
