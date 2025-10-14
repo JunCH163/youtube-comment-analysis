@@ -1,5 +1,6 @@
 package com.example.youtube_comment_analysis.video;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,20 +17,13 @@ public class VideoController {
 
 	private final VideoService videoService;
 
+	// dev 쪽에서 추가된 환경설정 기반 기본 fetch 개수 (미설정 시 1000)
+	@Value("${app.youtube.fetch-count:1000}")
+	private int fetchCount;
+
+	
 	@GetMapping("/{videoId}")
-	public ResponseEntity<?> getVideoData(@PathVariable("videoId") String videoId,
-										  @RequestParam(name = "limit", required = false) Integer limit){
-
-		int requested=(limit==null? 100 : limit);
-		int normalized = Math.min(1000, Math.max(100, requested));
-
-		return ResponseEntity.ok(videoService.getVideoData(videoId, normalized));
-	}
-
-	// --- 분석 API 엔드포인트 추가 ---
-	@GetMapping("/{videoId}/analysis")
-	public ResponseEntity<AnalysisDto> getVideoAnalysis(@PathVariable("videoId") String videoId) {
-		// VideoService에 있는 분석 메소드를 호출하고, 그 결과를 반환합니다.
-		return ResponseEntity.ok(videoService.analyzeCommentsActivity(videoId));
+	public ResponseEntity<?> getVideoData(@PathVariable("videoId") String videoId) {
+		return ResponseEntity.ok(videoService.getVideoData(videoId, fetchCount));
 	}
 }
