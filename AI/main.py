@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
+import uvicorn
 
 # predictors.py 파일에서 우리가 만든 클래스들을 가져옵니다.
 from analysis.sentiment_analyzer import SentimentPredictor
@@ -49,3 +50,8 @@ def analyze_comments(request: AnalysisRequest):
     }
     
     return final_response
+
+
+# ... FastAPI 앱 정의 코드 ...
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
