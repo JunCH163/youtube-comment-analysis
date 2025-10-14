@@ -46,10 +46,26 @@ public class WebClientConfig {
     }
 	
 	@Bean(name = "fastApiWebClient")
-    public WebClient fastApiWebClient(@Value("${fastapi.base-url}") String fastApiBaseUrl) {
-        return WebClient.builder()
-                .baseUrl(fastApiBaseUrl)
-                .defaultHeader("Accept", "application/json")
-                .build();
-    }
+	public WebClient fastApiWebClient(
+	        @Value("${fastapi.base-url}") String baseUrl,
+	        @Value("${fastapi.connect-timeout-ms:5000}") int connectTimeoutMs,
+	        @Value("${fastapi.response-timeout-ms:35000}") long responseTimeoutMs) {
+
+	    HttpClient httpClient = HttpClient.create()
+	        .option(io.netty.channel.ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeoutMs)
+	        .responseTimeout(java.time.Duration.ofMillis(responseTimeoutMs))
+	        .doOnConnected(conn -> conn
+	            .addHandlerLast(new io.netty.handler.timeout.ReadTimeoutHandler((int)(responseTimeoutMs/1000)))
+	            .addHandlerLast(new io.netty.handler.timeout.WriteTimeoutHandler((int)(responseTimeoutMs/1000))))
+	        .keepAlive(true)
+	        .compress(true);
+
+	    return WebClient.builder()
+	        .baseUrl(baseUrl)
+	        .clientConnector(new org.springframework.http.client.reactive.ReactorClientHttpConnector(httpClient))
+	        .defaultHeader("Accept", "application/json")
+	        .defaultHeader("Content-Type", "application/json")
+	        .codecs(c -> c.defaultCodecs().maxInMemorySize(32 * 1024 * 1024)) 
+	        .build();
+	}
 }

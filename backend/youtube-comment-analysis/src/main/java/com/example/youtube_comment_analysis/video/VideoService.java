@@ -140,8 +140,11 @@ public class VideoService {
 
             // --- AI Sender 호출 (FastAPI와 연동) ---
             var sendResult = aiSender.send(comments);
-            log.info("FastAPI sendOnly result: success={}, clientError={}, otherError={}",
+            long predicted = comments.stream().filter(c -> c.getPrediction()!=null).count();
+            log.info("분석 결과: total={}, predicted={}, result=({},{},{})",
+                    comments.size(), predicted,
                     sendResult.success(), sendResult.clientError(), sendResult.otherError());
+            resp.setComments(comments);
             
             //테스트 코드
             List<Integer> list=analyzeCommentsActivity(comments).getTopActiveHours();
@@ -149,10 +152,10 @@ public class VideoService {
             for(int l:list) {
             	System.out.println(l);
             }
-          //테스트 코드
-            
-            resp.setComments(comments);
+            //테스트 코드
+          
             return resp;
+            
         } catch (WebClientRequestException e) {
             throw new RuntimeException("네트워크 오류: " + e.getMessage(), e);
         } catch (TimeoutException e) {

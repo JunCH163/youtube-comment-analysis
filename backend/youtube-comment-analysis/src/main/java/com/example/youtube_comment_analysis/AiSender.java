@@ -38,6 +38,7 @@ public class AiSender {
 	@Value("${fastapi.max-batch:500}")
     private int maxBatch;
 	
+	public record AiSentimentResponse(List<CommentDto> comments) {}
 	
 	public SendResult send(List<CommentDto> comments) {
 		if(comments==null || comments.isEmpty())
@@ -47,6 +48,8 @@ public class AiSender {
                 .filter(c -> c.getText() != null && !c.getText().isBlank())
                 .toList();
 		
+		comments = new ArrayList<>(comments);
+		
 		if (comments.isEmpty()) 
 			return new SendResult(0, 0, 0);
 		
@@ -55,30 +58,66 @@ public class AiSender {
 		
 		int ok = 0, fail4xx = 0, failOther = 0;
 		
-		for(List<CommentDto> batch:batches) {
+		for(int b = 0;b<batches.size();b++) {
+			List<CommentDto> batch = batches.get(b);
+			int batchNo = b + 1;
+			int totalBatches = batches.size();
 			String etag=sha256For(batch);
+			
 			var req=new AiSentimentRequest(batch.stream()
 					.map(c->new AiSentimentRequest.Comment(c.getCommentId(), c.getAuthor(),c.getText(), c.getLikeCount(), c.getPublishedAt(),c.getPrediction()))
 					.toList(), 
 					new AiSentimentRequest.Trace(requestId, etag));
+			
+			long startNs = System.nanoTime();
+			
 			try {
-				var spec=fastApiWebClient.post()
-						.uri(path)
-						.bodyValue(req);
+				log.info("AI서버로 전송 reqId={} batchNo={}/{} size={} etag={}",
+	                    requestId, batchNo, totalBatches, batch.size(), etag);
 				
-				ResponseEntity<Void> resp=spec.retrieve()
-						.toBodilessEntity()
-						.timeout(Duration.ofMillis(timeoutMs))
-						.block();
+				ResponseEntity<AiSentimentResponse> resp = fastApiWebClient.post()
+		                .uri(path)
+		                .bodyValue(req)
+		                .retrieve()
+		                .toEntity(AiSentimentResponse.class)
+		                .timeout(Duration.ofMillis(timeoutMs))
+		                .block();
+				
+				if(resp != null && resp.getBody() != null && resp.getBody().comments() != null) {
+					List<CommentDto> analyzed = resp.getBody().comments();
+					
+					if (analyzed.size() == batch.size()) {
+				        for (int i = 0; i < analyzed.size(); i++) {
+				            Integer pred = analyzed.get(i).getPrediction();
+				            if (pred != null) 
+				            	batch.get(i).setPrediction(pred); 
+				        }
+					}
+					else {
+						var id2pred = new java.util.HashMap<String,Integer>(analyzed.size());
+						
+						for (var c : analyzed) 
+							if (c.getCommentId()!=null && c.getPrediction()!=null) 
+								id2pred.put(c.getCommentId(), c.getPrediction());
+						
+						 for (int i = 0; i < batch.size(); i++) {
+							 var orig = batch.get(i);
+							 Integer p = id2pred.get(orig.getCommentId());
+							 if (p != null) 
+								 orig.setPrediction(p);
+						 }
+					}
+				}
+				
 				
 				int code=resp!=null ? resp.getStatusCode().value() : -1;
 				if(code>=200 && code<300) {
 					ok+=batch.size();
-					log.info("FastAPI send ok: batchSize={} etag={}", batch.size(), etag);
+					log.info("FastAPI 전송 성공: batchSize={} etag={}", batch.size(), etag);
 				}
 				else if(code >= 400 && code < 500) {
 					fail4xx += batch.size();
-					log.warn("FastAPI client error {} etag={} batchSize={}", code, etag, batch.size());
+					log.warn("FastAPI 클라이언트 오류 {} etag={} batchSize={}", code, etag, batch.size());
 				}
 				else {
 					failOther += batch.size();
@@ -94,6 +133,11 @@ public class AiSender {
 				log.error("FastAPI send failed etag={} batchSize={}", etag, batch.size(), e);
 			}
 		}
+		
+		long predicted = comments.stream().filter(c -> c.getPrediction()!=null).count();
+		log.info("분류 완료 reqId={} total={} predicted={} ok={} 4xx={} other={}",
+	            requestId, comments.size(), predicted, ok, fail4xx, failOther);
+		
 		return new SendResult(ok, fail4xx, failOther);
 	}
 	
