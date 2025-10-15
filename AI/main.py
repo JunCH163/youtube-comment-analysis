@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
-import uvicorn
 
 # predictors.py 파일에서 우리가 만든 클래스들을 가져옵니다.
 from analysis.sentiment_analyzer import SentimentPredictor
+from analysis.keyword_extractor import KeywordExtractor
 
 # --- 1. 데이터 유효성 검사를 위한 모델 정의 (Pydantic) ---
 class Comment(BaseModel):
@@ -27,6 +27,7 @@ class AnalysisRequest(BaseModel):
 app = FastAPI()
 
 sentiment_predictor = SentimentPredictor()
+keyword_extractor = KeywordExtractor()
 
 # --- 3. API 엔드포인트(Endpoint) 생성 ---
 @app.post("/analyze/comments")
@@ -37,7 +38,14 @@ def analyze_comments(request: AnalysisRequest):
     comment_objects = request.comments
     
     comment_texts = [comment.text for comment in comment_objects]
+
+    # 감정 분석 실행
     predicted_labels = sentiment_predictor.predict(comment_texts)
+
+    detected_bot_count = 0
+    
+    # 키워드 추출 실행
+    top_keywords = keyword_extractor.extract(comment_texts)
     
     # 결과 병합
     for i, comment in enumerate(comment_objects):
@@ -46,7 +54,9 @@ def analyze_comments(request: AnalysisRequest):
     # 최종 응답 객체 생성
     final_response = {
         "comments": [c.model_dump() for c in comment_objects],
-        "trace": request.trace.model_dump()
+        "trace": request.trace.model_dump(),
+        "detectedBotCount": detected_bot_count,
+        "topKeyword": top_keywords
     }
     
     return final_response
@@ -54,4 +64,5 @@ def analyze_comments(request: AnalysisRequest):
 
 # ... FastAPI 앱 정의 코드 ...
 if __name__ == "__main__":
+    import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
