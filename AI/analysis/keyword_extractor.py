@@ -1,5 +1,3 @@
-# analysis/keyword_extractor.py
-
 from collections import Counter
 from konlpy.tag import Okt
 from typing import List, Dict, Union
