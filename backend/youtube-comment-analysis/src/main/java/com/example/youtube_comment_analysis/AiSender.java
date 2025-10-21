@@ -5,7 +5,11 @@ import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -38,22 +42,18 @@ public class AiSender {
 	@Value("${fastapi.max-batch:500}")
     private int maxBatch;
 	
-	public record AiSentimentResponse(List<CommentDto> comments) {}
-	
-	public SendResult send(List<CommentDto> comments) {
-		if(comments==null || comments.isEmpty())
-			return new SendResult(0,0,0);
+	public SendResult send(List<CommentDto> allComments) {
+		if (allComments == null || allComments.isEmpty()) {
+            return new SendResult(List.of(), 0, List.of());
+        }
+			
+		List<List<CommentDto>> batches = chunk(allComments, Math.max(1, maxBatch));
 		
-		comments = comments.stream()
-                .filter(c -> c.getText() != null && !c.getText().isBlank())
-                .toList();
+		int totalBots=0;
+	    Map<String, Integer> globalKeyword=new HashMap<>(256);
+	    Set<String> seenIds=new HashSet<>();
+	    List<CommentDto> keptAll=new ArrayList<>();
 		
-		comments = new ArrayList<>(comments);
-		
-		if (comments.isEmpty()) 
-			return new SendResult(0, 0, 0);
-		
-		List<List<CommentDto>> batches = chunk(comments, Math.max(1, maxBatch));
 		String requestId = UUID.randomUUID().toString();
 		
 		int ok = 0, fail4xx = 0, failOther = 0;
@@ -83,37 +83,67 @@ public class AiSender {
 		                .timeout(Duration.ofMillis(timeoutMs))
 		                .block();
 				
-				if(resp != null && resp.getBody() != null && resp.getBody().comments() != null) {
-					List<CommentDto> analyzed = resp.getBody().comments();
-					
-					if (analyzed.size() == batch.size()) {
-				        for (int i = 0; i < analyzed.size(); i++) {
-				            Integer pred = analyzed.get(i).getPrediction();
-				            if (pred != null) 
-				            	batch.get(i).setPrediction(pred); 
-				        }
-					}
-					else {
-						var id2pred = new java.util.HashMap<String,Integer>(analyzed.size());
-						
-						for (var c : analyzed) 
-							if (c.getCommentId()!=null && c.getPrediction()!=null) 
-								id2pred.put(c.getCommentId(), c.getPrediction());
-						
-						 for (int i = 0; i < batch.size(); i++) {
-							 var orig = batch.get(i);
-							 Integer p = id2pred.get(orig.getCommentId());
-							 if (p != null) 
-								 orig.setPrediction(p);
-						 }
-					}
-				}
-				
-				
 				int code=resp!=null ? resp.getStatusCode().value() : -1;
+				
 				if(code>=200 && code<300) {
 					ok+=batch.size();
-					log.info("FastAPI 전송 성공: batchSize={} etag={}", batch.size(), etag);
+					log.info("AI서버로 전송 성공: batchSize={} etag={}", batch.size(), etag);
+					
+					if (resp == null || resp.getBody() == null) 
+						continue;
+					
+	                AiSentimentResponse body = resp.getBody();
+	                
+	                totalBots += (body.detectedBotCount() != null ? body.detectedBotCount() : 0);
+	                
+	                if (body.topKeyword() != null) {
+	                    for (KeywordCount kc : body.topKeyword()) {
+	                        if (kc == null || kc.keyword() == null) continue;
+	                        String key = kc.keyword().trim();
+	                        int add = Math.max(0, kc.count());
+	                        globalKeyword.merge(key, add, Integer::sum);
+	                    }
+	                }
+	                
+	                List<CommentDto> analyzed = (body.comments() != null) ? body.comments() : List.of();  
+	                Set<String> keepIds = new HashSet<>(Math.max(16, analyzed.size() * 2));
+	                Map<String, Integer> id2pred = new HashMap<>(Math.max(16, analyzed.size() * 2));
+	                
+	                for (CommentDto c : analyzed) {
+	                    if (c == null) 
+	                    	continue;
+	                    String id = c.getCommentId();
+	                    if (id != null) {
+	                        keepIds.add(id);
+	                        if (c.getPrediction() != null) 
+	                        	id2pred.put(id, c.getPrediction());
+	                    }
+	                }
+	                
+	                int updated = 0, unmatched = 0, missingId = 0;
+	                for (CommentDto orig : batch) {
+	                    if (orig == null) 
+	                    	continue;
+	                    String id = orig.getCommentId();
+	                    if (id == null) {
+	                    	missingId++; 
+	                    	continue;
+	                    }
+	                    if (keepIds.contains(id) && seenIds.add(id)) {
+	                        Integer p = id2pred.get(id);
+	                        if (p != null) {
+	                        	orig.setPrediction(p);
+	                        	updated++;
+	                        }
+	                        	
+	                        keptAll.add(orig);
+	                    }
+	                    else {
+	                    	unmatched++;
+	                    }
+	                }
+	                log.info("AI apply: updated={}, unmatched(no-returned)={}, missingId={}",
+                            updated, unmatched, missingId);
 				}
 				else if(code >= 400 && code < 500) {
 					fail4xx += batch.size();
@@ -134,15 +164,19 @@ public class AiSender {
 			}
 		}
 		
-		long predicted = comments.stream().filter(c -> c.getPrediction()!=null).count();
+		long predicted = allComments.stream().filter(c -> c.getPrediction()!=null).count();
 		log.info("분류 완료 reqId={} total={} predicted={} ok={} 4xx={} other={}",
-	            requestId, comments.size(), predicted, ok, fail4xx, failOther);
+	            requestId, allComments.size(), predicted, ok, fail4xx, failOther);
 		
-		return new SendResult(ok, fail4xx, failOther);
+		final int TOP_N = 20;
+	    List<KeywordCount> topKeywordGlobal = globalKeyword.entrySet().stream()
+	        .sorted((a, b) -> Integer.compare(b.getValue(), a.getValue()))
+	        .limit(TOP_N)
+	        .map(e -> new KeywordCount(e.getKey(), e.getValue()))
+	        .toList();
+		
+	    return new SendResult(keptAll, totalBots, topKeywordGlobal);
 	}
-	
-	
-	 public record SendResult(int success, int clientError, int otherError) {}
 	 
 	 private static List<List<CommentDto>> chunk(List<CommentDto> list, int size) {
 	        List<List<CommentDto>> out = new ArrayList<>();

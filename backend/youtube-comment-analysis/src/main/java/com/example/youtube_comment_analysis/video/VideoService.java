@@ -1,11 +1,15 @@
 package com.example.youtube_comment_analysis.video;
 
-import com.example.youtube_comment_analysis.AiSender;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
-import io.netty.handler.timeout.TimeoutException;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
@@ -13,12 +17,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import com.example.youtube_comment_analysis.AiSender;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.netty.handler.timeout.TimeoutException;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -37,7 +41,7 @@ public class VideoService {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public VideoResponse getVideoData(String videoId, int limit) {
+    public VideoAnalysisResponse getVideoData(String videoId, int limit) {
         try {
             // --- 영상 메타데이터 조회 ---
             String videoJson = yt.get()
@@ -55,27 +59,8 @@ public class VideoService {
                                     .map(body -> new RuntimeException("유튜브 서버 오류: " + body)))
                     .bodyToMono(String.class)
                     .block();
-
-            JsonNode vroot = mapper.readTree(videoJson);
-            JsonNode items = vroot.path("items");
-
-            if (!items.isArray() || items.size() == 0) {
-                throw new IllegalArgumentException("영상 없음 : " + videoId);
-            }
-
-            JsonNode v0 = items.get(0);
-            JsonNode snippet = v0.path("snippet");
-            JsonNode stats = v0.path("statistics");
-
-            VideoResponse resp = new VideoResponse();
-            resp.setVideoId(videoId);
-            resp.setTitle(snippet.path("title").asText(null));
-            resp.setChannelId(snippet.path("channelId").asText(null));
-            resp.setChannelTitle(snippet.path("channelTitle").asText(null));
-            resp.setPublishedAt(snippet.path("publishedAt").asText(null));
-            resp.setViewCount(stats.path("viewCount").isMissingNode() ? null : stats.path("viewCount").asLong());
-            resp.setLikeCount(stats.path("likeCount").isMissingNode() ? null : stats.path("likeCount").asLong());
-            resp.setCommentCount(stats.path("commentCount").isMissingNode() ? null : stats.path("commentCount").asLong());
+            
+            VideoMeta meta = parseVideoMeta(videoJson);
 
             // --- 댓글 데이터 조회 ---
             List<CommentDto> comments = new ArrayList<>();
@@ -140,11 +125,7 @@ public class VideoService {
 
             // --- AI Sender 호출 (FastAPI와 연동) ---
             var sendResult = aiSender.send(comments);
-            long predicted = comments.stream().filter(c -> c.getPrediction()!=null).count();
-            log.info("분석 결과: total={}, predicted={}, result=({},{},{})",
-                    comments.size(), predicted,
-                    sendResult.success(), sendResult.clientError(), sendResult.otherError());
-            resp.setComments(comments);
+            
             
             //테스트 코드
             List<Integer> list=analyzeCommentsActivity(comments).getTopActiveHours();
@@ -154,7 +135,12 @@ public class VideoService {
             }
             //테스트 코드
           
-            return resp;
+            return new VideoAnalysisResponse(
+                    meta,
+                    sendResult.comments(),
+                    sendResult.totalDetectedBotCount(),
+                    sendResult.topKeywordGlobal()
+            );
             
         } catch (WebClientRequestException e) {
             throw new RuntimeException("네트워크 오류: " + e.getMessage(), e);
@@ -162,6 +148,31 @@ public class VideoService {
             throw new RuntimeException("YouTube API 응답 지연", e);
         } catch (Exception e) {
             throw new RuntimeException("Failed to fetch YouTube data: " + e.getMessage(), e);
+        }
+    }
+    
+    private VideoMeta parseVideoMeta(String videoJson) {
+        try {
+            JsonNode root = mapper.readTree(videoJson);
+            JsonNode item = (root.path("items").isArray() && root.path("items").size() > 0)
+                    ? root.path("items").get(0) : mapper.createObjectNode();
+
+            JsonNode snippet = item.path("snippet");
+            JsonNode stats   = item.path("statistics");
+
+            String title        = snippet.path("title").asText(null);
+            String channelId    = snippet.path("channelId").asText(null);
+            String channelTitle = snippet.path("channelTitle").asText(null);
+            String publishedAt  = snippet.path("publishedAt").asText(null);
+
+            Long viewCount    = stats.path("viewCount").isMissingNode() ? null : stats.path("viewCount").asLong();
+            Long likeCount    = stats.path("likeCount").isMissingNode() ? null : stats.path("likeCount").asLong();
+            Long commentCount = stats.path("commentCount").isMissingNode() ? null : stats.path("commentCount").asLong();
+
+            return new VideoMeta(title, channelId, channelTitle, publishedAt, viewCount, likeCount, commentCount);
+        } catch (Exception e) {
+            log.error("video meta parse error", e);
+            return new VideoMeta(null, null, null, null, null, null, null);
         }
     }
 
