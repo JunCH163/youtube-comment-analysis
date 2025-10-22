@@ -38,7 +38,7 @@
         }
 
         .header h1:hover {
-            opacity: 0.8;  /* 호버 시 살짝 투명해짐 */
+            opacity: 0.8;
         }
 
         .main-container {
@@ -61,7 +61,6 @@
             width: 100%;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-
 
         .title {
             font-size: 2.5rem;
@@ -404,7 +403,47 @@
             }
         });
 
-        startBtn.addEventListener('click', function() {
+        // URL에서 videoId 추출 함수
+        function extractVideoId(url) {
+            const patterns = [
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/
+            ];
+            
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match && match[1]) {
+                    return match[1];
+                }
+            }
+            return null;
+        }
+        
+        // URL에서 channelId 추출 함수
+        function extractChannelId(url) {
+            // channel/로 시작하는 경우
+            let match = url.match(/youtube\.com\/channel\/([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                return match[1];
+            }
+            
+            // @username 형식인 경우
+            match = url.match(/youtube\.com\/@([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                return match[1];
+            }
+            
+            // /c/ 또는 /user/ 형식인 경우
+            match = url.match(/youtube\.com\/(?:c|user)\/([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                return match[1];
+            }
+            
+            return null;
+        }
+
+        startBtn.addEventListener('click', async function() {
             const url = urlInput.value.trim();
             
             if (!url || !currentType) {
@@ -416,19 +455,59 @@
             startBtn.style.display = 'none';
             loading.style.display = 'block';
             
-            // 실제 서버 요청 시뮬레이션
-            setTimeout(() => {
+            try {
+                let response;
+                const baseURL = 'http://localhost:8000';
                 
+                // 영상 분석인 경우
+                if (currentType === 'video') {
+                    const videoId = extractVideoId(url);
+                    if (!videoId) {
+                        throw new Error('영상 ID를 추출할 수 없습니다.');
+                    }
+                    
+                    response = await fetch(`${baseURL}/video/${videoId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+                // 채널 분석인 경우
+                else if (currentType === 'channel') {
+                    const channelId = extractChannelId(url);
+                    if (!channelId) {
+                        throw new Error('채널 ID를 추출할 수 없습니다.');
+                    }
+                    
+                    response = await fetch(`${baseURL}/channel/${channelId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+                
+                // 응답 확인
+                if (response.ok) {
+                    // 분석 요청 성공하면 결과 페이지로 이동
+                    if (currentType === 'video') {
+                        window.location.href = `watch_result.html?type=video&id=${videoId}`;
+                    } else if (currentType === 'channel') {
+                        window.location.href = `channel_result.html?type=channel&id=${channelId}`;
+                    }
+                } else {
+                    throw new Error(`서버 오류: ${response.status} ${response.statusText}`);
+                }
+                
+            } catch (error) {
+                console.error('전송 오류:', error);
+                alert(`전송 실패: ${error.message}\n\n서버가 실행 중인지 확인해주세요.`);
+            } finally {
                 // 로딩 숨기고 버튼 다시 표시
                 loading.style.display = 'none';
                 startBtn.style.display = 'block';
-                
-                // 실제 구현에서는 여기서 서버로 데이터를 전송
-                console.log('Sending to server:', {
-                    url: url,
-                    type: currentType
-                });
-            }, 2000);
+            }
         });
 
         function showAlert(text) {
