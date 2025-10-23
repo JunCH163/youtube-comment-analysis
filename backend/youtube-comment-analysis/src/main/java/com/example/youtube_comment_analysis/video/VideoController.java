@@ -23,7 +23,10 @@ public class VideoController {
 
 	
 	@GetMapping("/{videoId}")
-	public ResponseEntity<?> getVideoData(@PathVariable("videoId") String videoId) {
+	public ResponseEntity<?> getVideoData(
+            @PathVariable("videoId") String videoId,
+            @RequestParam(required = false, defaultValue = "Asia/Seoul") String tz, // ✅ 추가
+            @RequestParam(required = false) Integer limit ) {
 		return ResponseEntity.ok(videoService.getVideoData(videoId, fetchCount));
 	}
 }

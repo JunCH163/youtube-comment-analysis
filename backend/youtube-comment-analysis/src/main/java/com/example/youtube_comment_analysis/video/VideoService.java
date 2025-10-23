@@ -2,11 +2,10 @@ package com.example.youtube_comment_analysis.video;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -125,8 +124,11 @@ public class VideoService {
 
             // --- AI Sender 호출 (FastAPI와 연동) ---
             var sendResult = aiSender.send(comments);
-            
-            
+
+            // ✅ 감정 통계 계산
+            ZoneId zone = ZoneId.of("Asia/Seoul");
+            StatsDto stats = buildStats(sendResult.comments(), zone);
+
             //테스트 코드
             List<Integer> list=analyzeCommentsActivity(comments).getTopActiveHours();
             
@@ -139,7 +141,8 @@ public class VideoService {
                     meta,
                     sendResult.comments(),
                     sendResult.totalDetectedBotCount(),
-                    sendResult.topKeywordGlobal()
+                    sendResult.topKeywordGlobal(),
+                    stats
             );
             
         } catch (WebClientRequestException e) {
@@ -234,5 +237,42 @@ public class VideoService {
                 .totalCommentPeriod(totalCommentPeriod)
                 .averageCommentsPerHour(averageCommentsPerHour)
                 .build();
+    }
+
+    private StatsDto buildStats(List<CommentDto> comments, ZoneId zone) {
+        StatsDto stats = new StatsDto();
+
+        // 감정별 TOP 좋아요 추적용
+        Map<Sentiment, Integer> topLikes = new EnumMap<>(Sentiment.class);
+        for (Sentiment s : Sentiment.values()) topLikes.put(s, Integer.MIN_VALUE);
+
+        for (CommentDto c : comments) {
+            // 1) 감정 매핑 (AI 기준: 0=부정, 1=중립, 2=긍정)
+            Sentiment s = Sentiment.fromPrediction(c.getPrediction());
+            stats.incTotal(s);
+
+            // 2) 시간대 버킷 (2시간 단위) — “02시 라벨은 00:00~01:59”
+            // publishedAt: UTC ISO-8601 가정
+            if (c.getPublishedAt() != null) {
+                LocalDateTime local = OffsetDateTime.parse(c.getPublishedAt())
+                        .atZoneSameInstant(zone)
+                        .toLocalDateTime();
+
+                int hour = local.getHour();               // 0~23
+                int label = ((hour / 2) + 1) * 2;         // 2,4,...,24
+                if (label == 24) label = 0;               // 24 → 0
+
+                // 0→idx0, 2→idx1, ..., 22→idx11
+                stats.getHourly().get(label / 2).inc(s);
+            }
+
+            // 3) 감정별 좋아요 최댓값 댓글
+            int likes = (c.getLikeCount() == null) ? 0 : c.getLikeCount().intValue();
+            if (likes > topLikes.get(s)) {
+                topLikes.put(s, likes);
+                stats.getTopLikedBySentiment().put(s, c);
+            }
+        }
+        return stats;
     }
 }
