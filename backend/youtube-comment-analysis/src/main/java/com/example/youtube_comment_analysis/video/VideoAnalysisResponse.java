@@ -9,6 +9,8 @@ public record VideoAnalysisResponse(
 	    List<CommentDto> comments,          //봇 제거 후 최종 댓글
 	    int totalDetectedBotCount,
 	    List<KeywordCount> topKeywordGlobal,
-        StatsDto stats ) {
+        StatsDto stats,
+        int commentCountBeforeBot,                // ✅ 추가: 봇 필터 전 수집된 댓글 수
+        int commentCountAfterBot ) {
 
 }

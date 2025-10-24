@@ -122,12 +122,16 @@ public class VideoService {
                 	break;
             }
 
+            int beforeBot = comments.size();
+
             // --- AI Sender 호출 (FastAPI와 연동) ---
             var sendResult = aiSender.send(comments);
 
             // ✅ 감정 통계 계산
             ZoneId zone = ZoneId.of("Asia/Seoul");
             StatsDto stats = buildStats(sendResult.comments(), zone);
+
+            int afterBot = sendResult.comments().size();
 
             //테스트 코드
             List<Integer> list=analyzeCommentsActivity(comments).getTopActiveHours();
@@ -142,7 +146,9 @@ public class VideoService {
                     sendResult.comments(),
                     sendResult.totalDetectedBotCount(),
                     sendResult.topKeywordGlobal(),
-                    stats
+                    stats,
+                    beforeBot,            // ✅ 추가
+                    afterBot
             );
             
         } catch (WebClientRequestException e) {
