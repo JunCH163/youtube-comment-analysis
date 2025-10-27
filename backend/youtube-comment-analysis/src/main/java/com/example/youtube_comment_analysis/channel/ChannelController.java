@@ -15,7 +15,7 @@ public class ChannelController {
 	
 	private final ChannelService channelService;
 
-	@GetMapping("/")
+	@GetMapping("/{channelId}")
 	public ResponseEntity<?> getChannelData(@PathVariable("channelId")String channelId){
 		return ResponseEntity.ok(channelService.getChannelData(channelId));
 	}

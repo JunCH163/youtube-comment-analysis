@@ -173,15 +173,16 @@ public class VideoService {
             String channelId    = snippet.path("channelId").asText(null);
             String channelTitle = snippet.path("channelTitle").asText(null);
             String publishedAt  = snippet.path("publishedAt").asText(null);
+            String thumbnails=snippet.path("thumbnails").asText();
 
             Long viewCount    = stats.path("viewCount").isMissingNode() ? null : stats.path("viewCount").asLong();
             Long likeCount    = stats.path("likeCount").isMissingNode() ? null : stats.path("likeCount").asLong();
             Long commentCount = stats.path("commentCount").isMissingNode() ? null : stats.path("commentCount").asLong();
 
-            return new VideoMeta(title, channelId, channelTitle, publishedAt, viewCount, likeCount, commentCount);
+            return new VideoMeta(title, channelId, channelTitle, publishedAt, viewCount, likeCount, commentCount,thumbnails);
         } catch (Exception e) {
             log.error("video meta parse error", e);
-            return new VideoMeta(null, null, null, null, null, null, null);
+            return new VideoMeta(null, null, null, null, null, null, null,null);
         }
     }
 
