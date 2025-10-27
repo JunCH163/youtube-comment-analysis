@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Comment Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://cdn.pixabay.com/photo/2022/02/21/06/42/tablet-7025900_1280.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        
+        .header {
+            background: rgba(30, 30, 30, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            color: #ffffff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.3s ease;
+        }
+
+        .header h1:hover {
+            opacity: 0.8;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .content {
+            background: rgba(40, 40, 40, 0.92);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .title {
+            font-size: 2.5rem;
+            color: #ffffff;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #cccccc;
+            margin-bottom: 2.5rem;
+            line-height: 1.5;
+        }
+
+        .input-container {
+            margin-bottom: 2rem;
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            border: 2px solid #555;
+            border-radius: 12px;
+            outline: none;
+            transition: all 0.3s ease;
+            background: rgba(60, 60, 60, 0.95);
+            color: #ffffff;
+        }
+
+        .url-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+            background: rgba(70, 70, 70, 1);
+            transform: translateY(-2px);
+        }
+
+        .url-input::placeholder {
+            color: #aaa;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            justify-content: center;
+        }
+
+        .analysis-btn {
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+            background: #f8f9fa;
+            color: #999;
+        }
+
+        .analysis-btn.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .analysis-btn.active {
+            background: linear-gradient(45deg, #363636, #5e5e5e);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .analysis-btn.inactive {
+            background: #e9ecef;
+            color: #adb5bd;
+            cursor: not-allowed;
+        }
+
+        .start-btn {
+            padding: 1rem 3rem;
+            font-size: 1.1rem;
+            background: linear-gradient(45deg, #a74128, #c99320);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.4s ease;
+            opacity: 0;
+            transform: translateY(30px);
+            pointer-events: none;
+            box-shadow: 0 8px 25px rgba(167, 70, 40, 0.3);
+        }
+
+        .start-btn.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(167, 59, 40, 0.4);
+        }
+
+        .footer {
+            background: rgba(20, 20, 20, 0.85);
+            padding: 1.5rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .copyright {
+            color: #cccccc;
+            font-size: 0.9rem;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .footer-links a {
+            color: #cccccc;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .footer-links a:hover {
+            color: #667eea;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 1rem;
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                margin: 1rem;
+                padding: 2rem 1.5rem;
+            }
+
+            .title {
+                font-size: 2rem;
+            }
+
+            .button-container {
+                flex-direction: column;
+            }
+
+            .footer-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .footer-links {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1 onclick="location.reload()">LDB</h1>
+    </header>
+
+    <main class="main-container">
+        <div class="content fade-in-up">
+            <h1 class="title">유튜브 댓글 분석</h1>
+            <p class="subtitle">YouTube 영상 또는 채널 URL을 붙여넣어 주십시오.</p>
+            
+            <div class="input-container">
+                <input 
+                    type="text" 
+                    class="url-input" 
+                    id="urlInput" 
+                    placeholder="유튜브 채널 또는 영상의 URL을 붙여넣으세요..."
+                />
+            </div>
+
+            <div class="button-container">
+                <button class="analysis-btn" id="channelBtn">채널분석</button>
+                <button class="analysis-btn" id="videoBtn">영상분석</button>
+            </div>
+
+            <button class="start-btn" id="startBtn">분석 시작</button>
+
+            <div class="loading" id="loading">
+                <div class="loading-spinner"></div>
+                <p style="margin-top: 1rem; color: #666;">분석 중...</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="copyright">
+                © 2025 YouTube Comment Analyzer. All rights reserved.
+            </div>
+            <div class="footer-links">
+                <a href="#" onclick="showAlert('Privacy Policy')">Privacy Policy</a>
+                <a href="#" onclick="showAlert('Terms of Service')">Terms of Service</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const urlInput = document.getElementById('urlInput');
+        const channelBtn = document.getElementById('channelBtn');
+        const videoBtn = document.getElementById('videoBtn');
+        const startBtn = document.getElementById('startBtn');
+        const loading = document.getElementById('loading');
+
+        let currentType = null;
+
+        // YouTube URL 패턴 정규식
+        const youtubePatterns = {
+            video: [
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)/,
+                /youtube\.com\/watch\?.*v=/
+            ],
+            channel: [
+                /youtube\.com\/channel\//,
+                /youtube\.com\/c\//,
+                /youtube\.com\/user\//,
+                /youtube\.com\/@/
+            ]
+        };
+
+        function analyzeURL(url) {
+            if (!url) return null;
+            
+            // 비디오 URL 체크
+            for (const pattern of youtubePatterns.video) {
+                if (pattern.test(url)) {
+                    return 'video';
+                }
+            }
+            
+            // 채널 URL 체크
+            for (const pattern of youtubePatterns.channel) {
+                if (pattern.test(url)) {
+                    return 'channel';
+                }
+            }
+            
+            return null;
+        }
+
+        function showButtons(type) {
+            currentType = type;
+            
+            // 버튼 표시 애니메이션
+            setTimeout(() => {
+                channelBtn.classList.add('show');
+                videoBtn.classList.add('show');
+                
+                if (type === 'channel') {
+                    channelBtn.classList.add('active');
+                    channelBtn.classList.remove('inactive');
+                    videoBtn.classList.add('inactive');
+                    videoBtn.classList.remove('active');
+                } else if (type === 'video') {
+                    videoBtn.classList.add('active');
+                    videoBtn.classList.remove('inactive');
+                    channelBtn.classList.add('inactive');
+                    channelBtn.classList.remove('active');
+                }
+                
+                // 분석 시작 버튼 표시
+                setTimeout(() => {
+                    startBtn.classList.add('show');
+                }, 200);
+            }, 300);
+        }
+
+        function hideButtons() {
+            currentType = null;
+            channelBtn.classList.remove('show', 'active', 'inactive');
+            videoBtn.classList.remove('show', 'active', 'inactive');
+            startBtn.classList.remove('show');
+        }
+
+        urlInput.addEventListener('input', function() {
+            const url = this.value.trim();
+            const type = analyzeURL(url);
+            
+            if (type) {
+                showButtons(type);
+            } else {
+                hideButtons();
+            }
+        });
+
+        // URL에서 videoId 추출 함수
+        function extractVideoId(url) {
+            const patterns = [
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/
+            ];
+            
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match && match[1]) {
+                    return match[1];
+                }
+            }
+            return null;
+        }
+        
+        // URL에서 channelId 추출 함수
+        function extractChannelId(url) {
+            // channel/로 시작하는 경우
+            let match = url.match(/youtube\.com\/channel\/([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                return match[1];
+            }
+            
+            // @username 형식인 경우
+            match = url.match(/youtube\.com\/@([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                return match[1];
+            }
+            
+            // /c/ 또는 /user/ 형식인 경우
+            match = url.match(/youtube\.com\/(?:c|user)\/([a-zA-Z0-9_-]+)/);
+            if (match && match[1]) {
+                return match[1];
+            }
+            
+            return null;
+        }
+
+        startBtn.addEventListener('click', async function() {
+            const url = urlInput.value.trim();
+            
+            if (!url || !currentType) {
+                alert('유효한 YouTube URL을 입력해주세요.');
+                return;
+            }
+            
+            // 버튼을 즉시 숨기고 로딩 표시
+            startBtn.style.display = 'none';
+            loading.style.display = 'block';
+            
+            try {
+                let response;
+                const baseURL = 'http://localhost:8080';
+                
+                // 영상 분석인 경우
+                if (currentType === 'video') {
+                    const videoId = extractVideoId(url);
+                    if (!videoId) {
+                        throw new Error('영상 ID를 추출할 수 없습니다.');
+                    }
+                    
+                    response = await fetch(`${baseURL}/video/${videoId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+                // 채널 분석인 경우
+                else if (currentType === 'channel') {
+                    const channelId = extractChannelId(url);
+                    if (!channelId) {
+                        throw new Error('채널 ID를 추출할 수 없습니다.');
+                    }
+                    
+                    response = await fetch(`${baseURL}/channel/${channelId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                }
+                
+                // 응답 확인
+                if (response.ok) {
+                    // 분석 요청 성공하면 결과 페이지로 이동
+                    if (currentType === 'video') {
+                        window.location.href = `watch_result.html?type=video&id=${videoId}`;
+                    } else if (currentType === 'channel') {
+                        window.location.href = `channel_result.html?type=channel&id=${channelId}`;
+                    }
+                } else {
+                    throw new Error(`서버 오류: ${response.status} ${response.statusText}`);
+                }
+                
+            } catch (error) {
+                console.error('전송 오류:', error);
+                alert(`전송 실패: ${error.message}\n\n서버가 실행 중인지 확인해주세요.`);
+            } finally {
+                // 로딩 숨기고 버튼 다시 표시
+                loading.style.display = 'none';
+                startBtn.style.display = 'block';
+            }
+        });
+
+        function showAlert(text) {
+            alert(`${text} 페이지는 아직 구현되지 않았습니다.`);
+        }
+
+        // URL 입력 필드에 포커스 시 애니메이션
+        urlInput.addEventListener('focus', function() {
+            this.parentElement.style.transform = 'scale(1.02)';
+        });
+
+        urlInput.addEventListener('blur', function() {
+            this.parentElement.style.transform = 'scale(1)';
+        });
+    </script>
+</body>
+</html>
