@@ -187,11 +187,12 @@ public class ChannelService {
             JsonNode snippet = item.path("snippet");
             JsonNode statistics=item.path("statistics");
             
-            String id=item.path("id").asText();
+            String id=item.path("id").asText(null);
+            
             String title = snippet.path("title").asText(null);
             String description = snippet.path("description").asText(null);
             String publishedAt = snippet.path("publishedAt").asText(null);
-            String thumbnails = snippet.path("thumbnails").path("high").path("url").asText();
+            String thumbnails = snippet.path("thumbnails").path("high").path("url").asText(null);
             
             Long viewCount=statistics.path("viewCount").asLong();
             Long subscriberCount=statistics.path("subscriberCount").asLong();

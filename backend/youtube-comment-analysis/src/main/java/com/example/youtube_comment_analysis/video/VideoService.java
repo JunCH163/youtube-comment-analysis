@@ -56,7 +56,7 @@ public class VideoService {
             //영상 메타데이터 조회
             String videoJson = yt.get()
                     .uri(b -> b.path("/videos")
-                            .queryParam("part", "snippet,statistics")
+                            .queryParam("part", "id,snippet,statistics")
                             .queryParam("id", videoId)
                             .queryParam("key", apikey)
                             .build())
@@ -205,6 +205,8 @@ public class VideoService {
 
             JsonNode snippet = item.path("snippet");
             JsonNode stats   = item.path("statistics");
+            
+            String id=item.path("id").asText(null);
 
             String title        = snippet.path("title").asText(null);
             String channelId    = snippet.path("channelId").asText(null);
@@ -216,10 +218,10 @@ public class VideoService {
             Long likeCount    = stats.path("likeCount").isMissingNode() ? null : stats.path("likeCount").asLong();
             Long commentCount = stats.path("commentCount").isMissingNode() ? null : stats.path("commentCount").asLong();
 
-            return new VideoMeta(title, channelId, channelTitle, publishedAt, viewCount, likeCount, commentCount,thumbnails);
+            return new VideoMeta(id,title, channelId, channelTitle, publishedAt, viewCount, likeCount, commentCount,thumbnails);
         } catch (Exception e) {
             log.error("video meta parse error", e);
-            return new VideoMeta(null, null, null, null, null, null, null,null);
+            return new VideoMeta(null ,null, null, null, null, null, null, null,null);
         }
     }
 
