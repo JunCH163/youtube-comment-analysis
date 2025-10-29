@@ -1,6 +1,6 @@
 import torch
 import os
-from typing import List
+from typing import List, Any
 from XDAC_obs.xdac_encrypted import AIUnifiedEngine, get_xdac_path
 
 class BotDetector:
@@ -37,5 +37,8 @@ class BotDetector:
             results = self.engine.predict(texts, batch_size=len(texts))
             bot_labels = [1 if (result.get('pred_label') == 'LLM') & (result.get('pred_score') >= 80.0) else 0 for result in results]
         
+        del results
+        torch.cuda.empty_cache()
+
         print("봇 탐지 완료.")
         return bot_labels

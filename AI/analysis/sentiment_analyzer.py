@@ -32,6 +32,10 @@ class SentimentPredictor:
 
         with torch.no_grad():
             outputs = self.model(**inputs)
-            predicted_labels_tensor = outputs.logits.argmax(dim=-1)
+            predicted_labels_tensor = outputs.logits.argmax(dim=-1).detach().cpu()
+
+        del inputs
+        del outputs
+        torch.cuda.empty_cache()
             
         return predicted_labels_tensor.tolist()
