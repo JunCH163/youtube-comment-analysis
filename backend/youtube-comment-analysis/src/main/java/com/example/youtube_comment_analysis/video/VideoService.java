@@ -5,7 +5,12 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -15,8 +20,13 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import com.example.youtube_comment_analysis.ai.AiSender;
+import com.example.youtube_comment_analysis.ai.SendResult;
+import com.example.youtube_comment_analysis.error.ExternalServiceException;
+import com.example.youtube_comment_analysis.error.VideoAnalysisException;
+import com.example.youtube_comment_analysis.error.VideoNotFoundException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -52,13 +62,19 @@ public class VideoService {
                             .build())
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, res ->
-                            res.bodyToMono(String.class)
-                                    .map(body -> new RuntimeException("클라이언트 오류 (API Key, 권한 등): " + body)))
+                    	res.bodyToMono(String.class).map(body ->
+                    		new ExternalServiceException("YouTube 4xx on /videos: " + body, null)))
                     .onStatus(HttpStatusCode::is5xxServerError, res ->
-                            res.bodyToMono(String.class)
-                                    .map(body -> new RuntimeException("유튜브 서버 오류: " + body)))
+                    	res.bodyToMono(String.class).map(body ->
+                    		new ExternalServiceException("YouTube 5xx on /videos: " + body, null)))
                     .bodyToMono(String.class)
                     .block();
+            
+            JsonNode vroot = mapper.readTree(videoJson);
+            JsonNode vitems = vroot.path("items");
+            if (!vitems.isArray() || vitems.size() == 0) {
+                throw new VideoNotFoundException("비디오를 찾지 못함: videoId=" + videoId);
+            }
             
             VideoMeta meta = parseVideoMeta(videoJson);
 
@@ -83,11 +99,11 @@ public class VideoService {
                                 .build())
                         .retrieve()
                         .onStatus(HttpStatusCode::is4xxClientError, res ->
-                                res.bodyToMono(String.class)
-                                        .map(body -> new RuntimeException("댓글 조회 오류: " + body)))
-                        .onStatus(HttpStatusCode::is5xxServerError, res ->
-                                res.bodyToMono(String.class)
-                                        .map(body -> new RuntimeException("댓글 서버 오류: " + body)))
+                        	res.bodyToMono(String.class).map(body ->
+                        		new ExternalServiceException("YouTube 4xx on /commentThreads: " + body, null)))
+                    .onStatus(HttpStatusCode::is5xxServerError, res ->
+                        	res.bodyToMono(String.class).map(body ->
+                            	new ExternalServiceException("YouTube 5xx on /commentThreads: " + body, null)))
                         .bodyToMono(String.class)
                         .block();
 
@@ -105,14 +121,16 @@ public class VideoService {
                         String publishedAt = cs.path("publishedAt").asText(null);
                         Integer prediction=0;
 
-                        comments.add(new CommentDto(
+                        if (commentId != null) {
+                            comments.add(new CommentDto(
                                 commentId,
                                 author,
                                 text,
                                 likeCount,
                                 publishedAt,
                                 prediction
-                        ));
+                            ));
+                        }
                     }
                 }
 
@@ -124,9 +142,20 @@ public class VideoService {
             }
 
             int beforeBot = comments.size();
+            
+            
 
             //AI Sender 호출 (FastAPI와 연동)
-            var sendResult = aiSender.send(comments);
+            SendResult sendResult;
+            try {
+            	sendResult = aiSender.send(comments);
+            }
+            catch(WebClientResponseException | WebClientRequestException | TimeoutException e) {
+            	throw new ExternalServiceException("AI 서버 호출 실패: " + e.getMessage(), e);
+            }
+            catch (Exception e) {
+                throw new VideoAnalysisException("AI 분류 처리 중 오류", e);
+            }
 
             //감정 통계 계산
             ZoneId zone = ZoneId.of("Asia/Seoul");
@@ -140,15 +169,31 @@ public class VideoService {
                     sendResult.topKeywordGlobal(),
                     stats,
                     beforeBot,           
-                    afterBot
+                    afterBot,
+                    sendResult.POSITIVE(),
+                    sendResult.NEUTRAL(),
+                    sendResult.NEGATIVE()
             );
             
-        } catch (WebClientRequestException e) {
-            throw new RuntimeException("네트워크 오류: " + e.getMessage(), e);
-        } catch (TimeoutException e) {
-            throw new RuntimeException("YouTube API 응답 지연", e);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to fetch YouTube data: " + e.getMessage(), e);
+        }
+        catch (WebClientResponseException e) { // HTTP status 있는 오류
+            throw new ExternalServiceException("YouTube 응답 오류: " + e.getRawStatusCode() + " " + e.getStatusText(), e);
+        }
+        catch (WebClientRequestException e) {  // DNS/연결 등 I/O 오류
+            throw new ExternalServiceException("YouTube 네트워크 오류: " + e.getMessage(), e);
+        }
+        catch (TimeoutException e) {
+            throw new ExternalServiceException("YouTube 응답 지연(Timeout)", e);
+        }
+        catch (VideoNotFoundException e) {
+            throw e; // 그대로 404로 올림
+        }
+        catch (ExternalServiceException e) {
+            throw e; // 그대로 502/504로 올림
+        }
+        catch (Exception e) {
+            // 파싱/로직 등 나머지 내부 오류
+            throw new VideoAnalysisException("영상 분석 중 내부 오류", e);
         }
     }
     
@@ -165,7 +210,7 @@ public class VideoService {
             String channelId    = snippet.path("channelId").asText(null);
             String channelTitle = snippet.path("channelTitle").asText(null);
             String publishedAt  = snippet.path("publishedAt").asText(null);
-            String thumbnails=snippet.path("thumbnails").asText();
+            String thumbnails = snippet.path("thumbnails").path("high").path("url").asText(null);
 
             Long viewCount    = stats.path("viewCount").isMissingNode() ? null : stats.path("viewCount").asLong();
             Long likeCount    = stats.path("likeCount").isMissingNode() ? null : stats.path("likeCount").asLong();
@@ -238,7 +283,7 @@ public class VideoService {
                 .build();
     }
 
-    private StatsDto buildStats(List<CommentDto> comments, ZoneId zone) {
+    public static StatsDto buildStats(List<CommentDto> comments, ZoneId zone) {
         StatsDto stats = new StatsDto();
 
         // 감정별 TOP 좋아요 추적용

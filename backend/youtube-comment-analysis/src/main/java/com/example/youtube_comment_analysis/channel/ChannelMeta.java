@@ -5,5 +5,8 @@ public record ChannelMeta(
 		String title,
 		String description,
 		String publishedAt,
-		String thumbnails) {
+		String thumbnails,
+		Long viewCount,
+		Long subscriberCount,
+		Long videoCount) {
 }

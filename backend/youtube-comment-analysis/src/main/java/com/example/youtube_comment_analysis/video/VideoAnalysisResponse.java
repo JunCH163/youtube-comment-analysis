@@ -10,6 +10,9 @@ public record VideoAnalysisResponse(
 	    List<KeywordCount> topKeywordGlobal,
         StatsDto stats,
         int commentCountBeforeBot,             
-        int commentCountAfterBot ) {
+        int commentCountAfterBot,
+        int POSITIVE,
+        int NEUTRAL,
+        int NEGATIVE) {
 
 }

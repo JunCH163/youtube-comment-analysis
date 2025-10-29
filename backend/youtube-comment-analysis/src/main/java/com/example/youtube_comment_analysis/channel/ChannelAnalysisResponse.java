@@ -5,12 +5,15 @@ import java.util.List;
 import com.example.youtube_comment_analysis.ai.KeywordCount;
 import com.example.youtube_comment_analysis.video.CommentDto;
 import com.example.youtube_comment_analysis.video.StatsDto;
+import com.example.youtube_comment_analysis.video.VideoMeta;
 
 public record ChannelAnalysisResponse(
-		ChannelMeta channel,						
-		List<CommentDto> comments,
+		ChannelMeta channel,
+		List<VideoMeta> videoMetas,
 		List<KeywordCount> topKeywordGlobal,
-		 StatsDto stats,
 		int commentCountBeforeBot,               
-	    int commentCountAfterBot) {
+	    int commentCountAfterBot,
+	    int POSITIVE,
+        int NEUTRAL,
+        int NEGATIVE) {
 }

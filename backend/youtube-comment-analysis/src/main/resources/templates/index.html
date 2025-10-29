@@ -12,7 +12,7 @@
         }
 
         body {
-            background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('https://cdn.pixabay.com/photo/2022/02/21/06/42/tablet-7025900_1280.jpg');
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.99)), url('https://cdn.pixabay.com/photo/2022/02/21/06/42/tablet-7025900_1280.jpg');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -59,7 +59,7 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
             max-width: 600px;
             width: 100%;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid #D64545;
         }
 
         .title {
@@ -94,7 +94,7 @@
         }
 
         .url-input:focus {
-            border-color: #667eea;
+            border-color: #D64545;
             box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
             background: rgba(70, 70, 70, 1);
             transform: translateY(-2px);
@@ -133,9 +133,8 @@
         }
 
         .analysis-btn.active {
-            background: linear-gradient(45deg, #363636, #5e5e5e);
+            background: linear-gradient(45deg, #363636, #D64545);
             color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
             transform: translateY(-2px);
         }
 
@@ -148,7 +147,7 @@
         .start-btn {
             padding: 1rem 3rem;
             font-size: 1.1rem;
-            background: linear-gradient(45deg, #a74128, #c99320);
+            background: linear-gradient(45deg, #D64545, #c99320);
             color: white;
             border: none;
             border-radius: 30px;
@@ -469,7 +468,7 @@
             
             // 즉시 결과 페이지로 이동 (fetch 없이)
             if (currentType === 'video') {
-                window.location.href = `watch_result.html?type=video&id=${id}`;
+                window.location.href = `watch_result_page.html?type=video&id=${id}`;
             } else if (currentType === 'channel') {
                 window.location.href = `channel_result.html?type=channel&id=${id}`;
             }
