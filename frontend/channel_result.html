@@ -844,6 +844,7 @@
             const params = new URLSearchParams(window.location.search);
             const type = params.get('type');
             const id = params.get('id');
+            let isPolling = true;
             
             if (!type || !id) {
                 alert('잘못된 접근입니다.');
