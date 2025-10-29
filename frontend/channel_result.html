@@ -257,22 +257,46 @@
         /* 키워드 클라우드 스타일 */
         .keyword-cloud-container {
             display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
+            flex-direction: column;
+            gap: 0.3rem;
             margin-top: 1rem;
             justify-content: center;
-            align-items: center;
-            min-height: 100px;
+            height: 100%;
+            flex: 1;
         }
 
-        .keyword-tag {
-            background: var(--accent-color); /* 색상 변경 */
-            color: white;
-            padding: 0.4rem 0.8rem;
-            border-radius: 20px;
+        .keyword-item {
+            background: rgba(40, 40, 40, 0.9);
+            padding: 1.5rem 2rem;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .keyword-item:hover {
+            background: rgba(50, 50, 50, 0.9);
+            transform: translateX(5px);
+        }
+
+        .keyword-item .keyword-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .keyword-item .keyword-count {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        .keyword-item .keyword-count::after {
+            content: "점";
             font-size: 0.9rem;
-            font-weight: 500;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            color: #aaa;
+            margin-left: 0.3rem;
         }
 
         /* Chart.js 툴팁 스타일 재정의 */
@@ -748,16 +772,21 @@
 
         function createKeywordCloud(data) {
             const container = document.getElementById('keywordCloud');
-            container.innerHTML = ''; // 기존 내용 초기화
+            container.innerHTML = '';
             
-            const keywords = data.topKeywordsAcross5; // analysisData에 있다고 가정
+            const keywords = data.topKeywordsAcross5;
             
             if (keywords && keywords.length > 0) {
-                keywords.forEach(item  => {
-                    const tag = document.createElement('span');
-                    tag.className = 'keyword-tag';
-                    tag.textContent = tag.textContent = `${item.keyword}`;
-                    container.appendChild(tag);
+                keywords.forEach((item, index) => {
+                    const keywordDiv = document.createElement('div');
+                    keywordDiv.className = 'keyword-item';
+                    
+                    keywordDiv.innerHTML = `
+                        <span class="keyword-name">${index + 1}. ${item.keyword}</span>
+                        <span class="keyword-count">${item.count}</span>
+                    `;
+                    
+                    container.appendChild(keywordDiv);
                 });
             } else {
                 container.textContent = '분석된 키워드가 없습니다.';
