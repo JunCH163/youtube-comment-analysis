@@ -55,6 +55,39 @@
             color: #ffffff;
         }
 
+        .loading-screen {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #cccccc;
+            font-size: 1.1rem;
+        }
+
+        .content-wrapper {
+            display: none;
+        }
+
+        .content-wrapper.loaded {
+            display: block;
+        }
+
         .video-info {
             background: rgba(40, 40, 40, 0.92);
             backdrop-filter: blur(15px);
@@ -332,161 +365,114 @@
 </head>
 <body>
     <header class="header">
-        <h1 onclick="location.reload()">LDB</h1>
+        <h1 onclick="window.location.href='/'">LDB</h1>
     </header>
 
     <div class="container">
         <h1 class="page-title">분석 결과 대시보드</h1>
 
-        <!-- 영상 정보 -->
-        <div class="video-info clearfix">
-            <div class="video-thumbnail"></div>
-            <div class="video-details">
-                <h2 id="videoTitle">영상 제목을 불러오는 중...</h2>
-                <p id="videoDescription">영상 설명을 불러오는 중...</p>
-            </div>
+        <!-- 로딩 화면 -->
+        <div class="loading-screen" id="loadingScreen">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">분석 결과를 불러오는 중...</p>
         </div>
 
-        <!-- 요약 섹션 -->
-        <div class="summary-section">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-number" id="viewCount">-</div>
-                    <div class="stat-label">조회수</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="likeCount">-</div>
-                    <div class="stat-label">좋아요 수</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="totalComments">-</div>
-                    <div class="stat-label">총 댓글 수</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number" id="analyzedComments">-</div>
-                    <div class="stat-label">분석 댓글 수</div>
+        <!-- 콘텐츠 -->
+        <div class="content-wrapper" id="contentWrapper">
+            <!-- 영상 정보 -->
+            <div class="video-info clearfix">
+                <div class="video-thumbnail"></div>
+                <div class="video-details">
+                    <h2 id="videoTitle">영상 제목을 불러오는 중...</h2>
+                    <p id="videoDescription">영상 설명을 불러오는 중...</p>
                 </div>
             </div>
-            
-            <div class="emotion-chart">
-                <div class="chart-title">감정 분석</div>
-                <canvas id="emotionPieChart" width="250" height="250"></canvas>
-            </div>
-        </div>
 
-        <!-- 시간당 감정 추이 -->
-        <div class="timeline-section">
-            <div class="chart-title">시간당 감정 추이</div>
-            <canvas id="timelineChart" height="100"></canvas>
-        </div>
-
-        <!-- 자주 언급되는 키워드 -->
-        <div class="keywords-section">
-            <div class="chart-title">자주 언급되는 키워드</div>
-            <div class="keywords-grid">
-                <div class="keyword-card">
-                    <div class="keyword-icon">📈</div>
-                    <div class="keyword-text" id="keyword1">키워드1</div>
-                    <div class="keyword-score"><span id="keywordScore1">-</span>점</div>
+            <!-- 요약 섹션 -->
+            <div class="summary-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="viewCount">-</div>
+                        <div class="stat-label">조회수</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="likeCount">-</div>
+                        <div class="stat-label">좋아요 수</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="totalComments">-</div>
+                        <div class="stat-label">총 댓글 수</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="analyzedComments">-</div>
+                        <div class="stat-label">분석 댓글 수</div>
+                    </div>
                 </div>
-                <div class="keyword-card">
-                    <div class="keyword-icon">💬</div>
-                    <div class="keyword-text" id="keyword2">키워드2</div>
-                    <div class="keyword-score"><span id="keywordScore2">-</span>점</div>
-                </div>
-                <div class="keyword-card">
-                    <div class="keyword-icon">⭐</div>
-                    <div class="keyword-text" id="keyword3">키워드3</div>
-                    <div class="keyword-score"><span id="keywordScore3">-</span>점</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 댓글 보기 -->
-        <div class="comments-section">
-            <div class="chart-title">댓글 보기</div>
-            
-            <div class="filter-bar">
-                <select class="filter-select" id="emotionFilter">
-                    <option value="">모든 감정</option>
-                    <option value="positive">긍정</option>
-                    <option value="negative">부정</option>
-                    <option value="neutral">중립</option>
-                </select>
                 
-                <select class="filter-select" id="sortFilter">
-                    <option value="latest">최신순</option>
-                    <option value="oldest">오래된순</option>
-                    <option value="likes">좋아요순</option>
-                </select>
-                
-                <select class="filter-select" id="lengthFilter">
-                    <option value="">모든 길이</option>
-                    <option value="short">짧은 댓글</option>
-                    <option value="long">긴 댓글</option>
-                </select>
+                <div class="emotion-chart">
+                    <div class="chart-title">감정 분석</div>
+                    <canvas id="emotionPieChart" width="250" height="250"></canvas>
+                </div>
             </div>
 
-            <div class="comments-list" id="commentsList">
-                <!-- 댓글 표시 공간 -->
+            <!-- 시간당 감정 추이 -->
+            <div class="timeline-section">
+                <div class="chart-title">시간당 감정 추이</div>
+                <canvas id="timelineChart" height="100"></canvas>
+            </div>
+
+            <!-- 자주 언급되는 키워드 -->
+            <div class="keywords-section">
+                <div class="chart-title">자주 언급되는 키워드</div>
+                <div class="keywords-grid">
+                    <div class="keyword-card">
+                        <div class="keyword-icon">📈</div>
+                        <div class="keyword-text" id="keyword1">키워드1</div>
+                        <div class="keyword-score"><span id="keywordScore1">-</span>점</div>
+                    </div>
+                    <div class="keyword-card">
+                        <div class="keyword-icon">💬</div>
+                        <div class="keyword-text" id="keyword2">키워드2</div>
+                        <div class="keyword-score"><span id="keywordScore2">-</span>점</div>
+                    </div>
+                    <div class="keyword-card">
+                        <div class="keyword-icon">⭐</div>
+                        <div class="keyword-text" id="keyword3">키워드3</div>
+                        <div class="keyword-score"><span id="keywordScore3">-</span>점</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 댓글 보기 -->
+            <div class="comments-section">
+                <div class="chart-title">댓글 보기</div>
+                
+                <div class="filter-bar">
+                    <select class="filter-select" id="emotionFilter">
+                        <option value="">모든 감정</option>
+                        <option value="positive">긍정</option>
+                        <option value="negative">부정</option>
+                        <option value="neutral">중립</option>
+                    </select>
+                    
+                    <select class="filter-select" id="sortFilter">
+                        <option value="likes" selected>좋아요순</option>
+                        <option value="latest">최신순</option>
+                        <option value="oldest">오래된순</option>
+                    </select>
+                </div>
+
+                <div class="comments-list" id="commentsList">
+                    <!-- 댓글 표시 공간 -->
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // 샘플 JSON 데이터 (실제로는 서버에서 받아올 데이터)
-        const analysisData = {
-            video: {
-                title: "샘플 YouTube 영상 제목",
-                description: "이것은 샘플 영상의 설명입니다.",
-                viewCount: 123456,
-                likeCount: 7890,
-                totalComments: 1234,
-                analyzedComments: 890
-            },
-            emotions: {
-                positive: 45,
-                negative: 25,
-                neutral: 30
-            },
-            timeline: {
-                hours: ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'],
-                positive: [5, 3, 2, 4, 8, 12, 18, 25, 20, 15, 10, 8],
-                negative: [2, 1, 1, 2, 4, 6, 8, 10, 8, 6, 4, 3],
-                neutral: [3, 2, 1, 3, 6, 8, 12, 15, 12, 9, 6, 5]
-            },
-            keywords: [
-                { "text": "키워드1", "score": 92 },
-                { "text": "키워드2", "score": 85 },
-                { "text": "키워드3", "score": 78 }
-            ],
-            comments: [
-                {
-                    author: "사용자1",
-                    text: "정말 재미있는 영상이네요! 구독하고 갑니다.",
-                    emotion: "positive",
-                    timestamp: "2024-01-15 14:30",
-                    likes: 25
-                },
-                {
-                    author: "사용자2",
-                    text: "이 부분이 이해가 잘 안되네요. 설명을 더 해주실 수 있나요?",
-                    emotion: "neutral",
-                    timestamp: "2024-01-15 15:22",
-                    likes: 5
-                },
-                {
-                    author: "사용자3",
-                    text: "별로 도움이 안되는 것 같아요. 시간 낭비했네요.",
-                    emotion: "negative", 
-                    timestamp: "2024-01-15 16:45",
-                    likes: 2
-                }
-            ]
-        };
-
         let emotionPieChart, timelineChart;
-        let filteredComments = [...analysisData.comments];
+        let analysisData = null;
+        let filteredComments = [];
 
         // 숫자 포맷팅 함수
         function formatNumber(num) {
@@ -498,45 +484,115 @@
             return num.toString();
         }
 
+        // 데이터 검증 함수
+        function validateData(data) {
+            const errors = [];
+            
+            // 필수 필드 체크
+            if (!data.video) errors.push('영상 정보');
+            if (!data.stats || !data.stats.totalBySentiment) errors.push('감정 분석 데이터');
+            if (!data.stats || !data.stats.hourly) errors.push('시간대별 데이터');
+            if (!data.comments) errors.push('댓글 데이터');
+            
+            if (errors.length > 0) {
+                throw new Error(`다음 데이터가 누락되었습니다: ${errors.join(', ')}`);
+            }
+            
+            return true;
+        }
+
+        // 안전하게 값 가져오기
+        function safeGet(obj, path, defaultValue = '-') {
+            return path.split('.').reduce((curr, key) => curr?.[key], obj) ?? defaultValue;
+        }
+
         // 데이터 로드 및 UI 업데이트
         function loadAnalysisData() {
-            // 영상 정보 업데이트
-            document.getElementById('videoTitle').textContent = analysisData.video.title;
-            document.getElementById('videoDescription').textContent = analysisData.video.description;
-            
-            // 통계 업데이트
-            document.getElementById('viewCount').textContent = formatNumber(analysisData.video.viewCount);
-            document.getElementById('likeCount').textContent = formatNumber(analysisData.video.likeCount);
-            document.getElementById('totalComments').textContent = formatNumber(analysisData.video.totalComments);
-            document.getElementById('analyzedComments').textContent = formatNumber(analysisData.video.analyzedComments);
-            
-            // 키워드 업데이트
-            document.getElementById('keyword1').textContent = analysisData.keywords[0].text;
-            document.getElementById('keyword2').textContent = analysisData.keywords[1].text;
-            document.getElementById('keyword3').textContent = analysisData.keywords[2].text;
+            if (!analysisData) return;
 
-            document.getElementById('keywordScore1').textContent = analysisData.keywords[0].score;
-            document.getElementById('keywordScore2').textContent = analysisData.keywords[1].score;
-            document.getElementById('keywordScore3').textContent = analysisData.keywords[2].score;
+            try {
+                // 데이터 검증
+                validateData(analysisData);
+
+                // 영상 정보 업데이트
+                document.getElementById('videoTitle').textContent = 
+                    safeGet(analysisData, 'video.title', '제목 없음');
+                document.getElementById('videoDescription').textContent = 
+                    safeGet(analysisData, 'video.description', '설명 없음');
             
-            // 차트 생성
-            createEmotionPieChart();
-            createTimelineChart();
-            
-            // 댓글 표시
-            displayComments();
+                // 통계 업데이트 (안전하게)
+                document.getElementById('viewCount').textContent = 
+                    formatNumber(safeGet(analysisData, 'video.viewCount', 0));
+                document.getElementById('likeCount').textContent = 
+                    formatNumber(safeGet(analysisData, 'video.likeCount', 0));
+                document.getElementById('totalComments').textContent = 
+                    formatNumber(safeGet(analysisData, 'video.commentCount', 0));
+                document.getElementById('analyzedComments').textContent = 
+                    formatNumber(safeGet(analysisData, 'commentCountAfterBot', 0));
+                
+                // 키워드 업데이트 (안전하게)
+                if (analysisData.topKeywordGlobal && Array.isArray(analysisData.topKeywordGlobal) && analysisData.topKeywordGlobal.length >= 3) {
+                    document.getElementById('keyword1').textContent = 
+                        safeGet(analysisData.topKeywordGlobal[0], 'keyword', '키워드1');
+                    document.getElementById('keyword2').textContent = 
+                        safeGet(analysisData.topKeywordGlobal[1], 'keyword', '키워드2');
+                    document.getElementById('keyword3').textContent = 
+                        safeGet(analysisData.topKeywordGlobal[2], 'keyword', '키워드3');
+
+                    document.getElementById('keywordScore1').textContent = 
+                        safeGet(analysisData.topKeywordGlobal[0], 'count', 0);
+                    document.getElementById('keywordScore2').textContent = 
+                        safeGet(analysisData.topKeywordGlobal[1], 'count', 0);
+                    document.getElementById('keywordScore3').textContent = 
+                        safeGet(analysisData.topKeywordGlobal[2], 'count', 0);
+                }
+                
+                // 차트 생성
+                createEmotionPieChart();
+                createTimelineChart();
+                
+                // 댓글 표시
+                filteredComments = Array.isArray(analysisData.comments) ? [...analysisData.comments] : [];
+                filteredComments.sort((a, b) => b.likeCount - a.likeCount);
+                displayComments();
+
+                // 로딩 화면 숨기고 콘텐츠 표시
+                document.getElementById('loadingScreen').style.display = 'none';
+                document.getElementById('contentWrapper').classList.add('loaded');
+                
+            } catch (error) {
+                console.error('데이터 로드 중 오류:', error);
+                document.getElementById('loadingScreen').innerHTML = `
+                    <p style="color: #dc3545; font-size: 1.2rem;">데이터 처리 중 오류가 발생했습니다.</p>
+                    <p style="color: #888; margin-top: 1rem;">${error.message}</p>
+                    <button onclick="window.location.href='/'" style="
+                        margin-top: 2rem;
+                        padding: 0.75rem 2rem;
+                        background: #667eea;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 1rem;
+                    ">메인으로 돌아가기</button>
+                `;
+            }
         }
 
         // 감정 파이 차트 생성
         function createEmotionPieChart() {
             const ctx = document.getElementById('emotionPieChart').getContext('2d');
             
+            const positive = safeGet(analysisData, 'stats.totalBySentiment.POSITIVE', 0);
+            const negative = safeGet(analysisData, 'stats.totalBySentiment.NEGATIVE', 0);
+            const neutral = safeGet(analysisData, 'stats.totalBySentiment.NEUTRAL', 0);
+            
             emotionPieChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
                     labels: ['긍정', '부정', '중립'],
                     datasets: [{
-                        data: [analysisData.emotions.positive, analysisData.emotions.negative, analysisData.emotions.neutral],
+                        data: [positive, negative, neutral],
                         backgroundColor: ['#28a745', '#dc3545', '#6c757d'],
                         borderWidth: 2,
                         borderColor: '#333'
@@ -562,28 +618,41 @@
         function createTimelineChart() {
             const ctx = document.getElementById('timelineChart').getContext('2d');
             
+            const hourly = analysisData.stats?.hourly || [];
+            const hours = [];
+            const positive = [];
+            const negative = [];
+            const neutral = [];
+            
+            hourly.forEach(item => {
+                hours.push(item.hour + ':00');
+                positive.push(item.counts.POSITIVE || 0);
+                negative.push(item.counts.NEGATIVE || 0);
+                neutral.push(item.counts.NEUTRAL || 0);
+            });
+            
             timelineChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: analysisData.timeline.hours,
+                    labels: hours,
                     datasets: [
                         {
                             label: '긍정',
-                            data: analysisData.timeline.positive,
+                            data: positive,
                             borderColor: '#28a745',
                             backgroundColor: 'rgba(40, 167, 69, 0.1)',
                             tension: 0.4
                         },
                         {
                             label: '부정',
-                            data: analysisData.timeline.negative,
+                            data: negative,
                             borderColor: '#dc3545',
                             backgroundColor: 'rgba(220, 53, 69, 0.1)',
                             tension: 0.4
                         },
                         {
                             label: '중립',
-                            data: analysisData.timeline.neutral,
+                            data: neutral,
                             borderColor: '#6c757d',
                             backgroundColor: 'rgba(108, 117, 125, 0.1)',
                             tension: 0.4
@@ -626,16 +695,24 @@
             const commentsList = document.getElementById('commentsList');
             commentsList.innerHTML = '';
             
+            if (!filteredComments || filteredComments.length === 0) {
+                commentsList.innerHTML = '<p style="text-align: center; color: #888; padding: 2rem;">댓글이 없습니다.</p>';
+                return;
+            }
+
             filteredComments.forEach(comment => {
                 const commentDiv = document.createElement('div');
-                commentDiv.className = `comment-item ${comment.emotion}`;
+                let emotion = 'neutral';
+                if (comment.prediction === 0) emotion = 'positive';
+                else if (comment.prediction === 2) emotion = 'negative';
+                commentDiv.className = `comment-item ${emotion}`;
                 
                 commentDiv.innerHTML = `
-                    <div class="comment-author">${comment.author}</div>
-                    <div class="comment-text">${comment.text}</div>
+                    <div class="comment-author">${safeGet(comment, 'author', '익명')}</div>
+                    <div class="comment-text">${safeGet(comment, 'text', '내용 없음')}</div>
                     <div class="comment-meta">
-                        <span>${comment.timestamp}</span>
-                        <span class="emotion-badge emotion-${comment.emotion}">${getEmotionText(comment.emotion)}</span>
+                        <span>${formatDate(safeGet(comment, 'publishedAt', ''))}</span>
+                        <span class="emotion-badge emotion-${emotion}">${getEmotionText(emotion)}</span>
                     </div>
                 `;
                 
@@ -653,45 +730,118 @@
             return emotionMap[emotion] || emotion;
         }
 
+        function formatDate(isoDate) {
+            if (!isoDate) return '시간 정보 없음';
+            
+            try {
+                const date = new Date(isoDate);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                
+                return `${year}-${month}-${day} ${hours}:${minutes}`;
+            } catch (error) {
+                return '시간 정보 없음';
+            }
+        }
+
         // 필터 이벤트 리스너
         document.getElementById('emotionFilter').addEventListener('change', applyFilters);
         document.getElementById('sortFilter').addEventListener('change', applyFilters);
-        document.getElementById('lengthFilter').addEventListener('change', applyFilters);
 
         // 필터 적용
         function applyFilters() {
+            if (!analysisData || !analysisData.comments) return;
+
             const emotionFilter = document.getElementById('emotionFilter').value;
             const sortFilter = document.getElementById('sortFilter').value;
-            const lengthFilter = document.getElementById('lengthFilter').value;
             
             filteredComments = [...analysisData.comments];
             
-            // 감정 필터
+            // 감정 필터 (prediction 기반)
             if (emotionFilter) {
-                filteredComments = filteredComments.filter(comment => comment.emotion === emotionFilter);
+                let predictionValue;
+                if (emotionFilter === 'positive') predictionValue = 0;
+                else if (emotionFilter === 'neutral') predictionValue = 1;
+                else if (emotionFilter === 'negative') predictionValue = 2;
+                
+                filteredComments = filteredComments.filter(comment => comment.prediction === predictionValue);
             }
             
-            // 길이 필터
-            if (lengthFilter === 'short') {
-                filteredComments = filteredComments.filter(comment => comment.text.length <= 50);
-            } else if (lengthFilter === 'long') {
-                filteredComments = filteredComments.filter(comment => comment.text.length > 50);
-            }
-            
-            // 정렬
+            // 정렬 (publishedAt 기반)
             if (sortFilter === 'latest') {
-                filteredComments.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                filteredComments.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
             } else if (sortFilter === 'oldest') {
-                filteredComments.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                filteredComments.sort((a, b) => new Date(a.publishedAt) - new Date(b.publishedAt));
             } else if (sortFilter === 'likes') {
-                filteredComments.sort((a, b) => b.likes - a.likes);
+                filteredComments.sort((a, b) => b.likeCount - a.likeCount);
             }
             
             displayComments();
         }
 
-        // 페이지 로드 시 데이터 로드
-        document.addEventListener('DOMContentLoaded', loadAnalysisData);
+        // 페이지 로드 시 URL에서 파라미터 추출 후 백엔드 요청
+        document.addEventListener('DOMContentLoaded', async () => {
+            const params = new URLSearchParams(window.location.search);
+            const type = params.get('type');
+            const id = params.get('id');
+            
+            if (!type || !id) {
+                alert('잘못된 접근입니다.');
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // 폴링: 주기적으로 서버에 데이터 요청
+            const pollInterval = 2000; // 2초마다 체크
+            const maxAttempts = 150; // 최대 5분 (2초 * 150 = 300초)
+            let attempts = 0;
+            
+            async function checkAnalysisStatus() {
+                try {
+                    attempts++;
+                    const response = await fetch(`http://localhost:8080/${type}/${id}`);
+                    
+                    if (response.ok) {
+                        analysisData = await response.json();
+                        loadAnalysisData();
+                        return true; // 성공
+                    } else if (response.status === 404 || response.status === 202) {
+                        // 404 또는 202: 아직 분석 중
+                        if (attempts >= maxAttempts) {
+                            throw new Error('분석 시간이 너무 오래 걸립니다. 잠시 후 다시 시도해주세요.');
+                        }
+                        // 계속 폴링
+                        setTimeout(checkAnalysisStatus, pollInterval);
+                        return false;
+                    } else {
+                        throw new Error('데이터를 불러올 수 없습니다.');
+                    }
+                    
+                } catch (error) {
+                    console.error('데이터 로드 오류:', error);
+                    document.getElementById('loadingScreen').innerHTML = `
+                        <p style="color: #dc3545; font-size: 1.2rem;">분석 결과를 불러오는데 실패했습니다.</p>
+                        <p style="color: #888; margin-top: 1rem;">${error.message}</p>
+                        <button onclick="window.location.href='index.html'" style="
+                            margin-top: 2rem;
+                            padding: 0.75rem 2rem;
+                            background: #667eea;
+                            color: white;
+                            border: none;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-size: 1rem;
+                        ">메인으로 돌아가기</button>
+                    `;
+                }
+            }
+            
+            // 첫 요청 시작
+            checkAnalysisStatus();
+        });
     </script>
 </body>
 </html>

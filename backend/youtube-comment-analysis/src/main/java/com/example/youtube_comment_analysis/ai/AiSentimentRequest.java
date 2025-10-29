@@ -1,4 +1,4 @@
-package com.example.youtube_comment_analysis;
+package com.example.youtube_comment_analysis.ai;
 
 import java.util.List;
 

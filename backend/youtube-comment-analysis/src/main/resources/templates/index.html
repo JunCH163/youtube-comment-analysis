@@ -443,7 +443,7 @@
             return null;
         }
 
-        startBtn.addEventListener('click', async function() {
+        startBtn.addEventListener('click', function() {
             const url = urlInput.value.trim();
             
             if (!url || !currentType) {
@@ -451,62 +451,27 @@
                 return;
             }
             
-            // 버튼을 즉시 숨기고 로딩 표시
-            startBtn.style.display = 'none';
-            loading.style.display = 'block';
+            // ID 추출
+            let id;
+            if (currentType === 'video') {
+                id = extractVideoId(url);
+                if (!id) {
+                    alert('영상 ID를 추출할 수 없습니다.');
+                    return;
+                }
+            } else if (currentType === 'channel') {
+                id = extractChannelId(url);
+                if (!id) {
+                    alert('채널 ID를 추출할 수 없습니다.');
+                    return;
+                }
+            }
             
-            try {
-                let response;
-                const baseURL = 'http://localhost:8080';
-                
-                // 영상 분석인 경우
-                if (currentType === 'video') {
-                    const videoId = extractVideoId(url);
-                    if (!videoId) {
-                        throw new Error('영상 ID를 추출할 수 없습니다.');
-                    }
-                    
-                    response = await fetch(`${baseURL}/video/${videoId}`, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                }
-                // 채널 분석인 경우
-                else if (currentType === 'channel') {
-                    const channelId = extractChannelId(url);
-                    if (!channelId) {
-                        throw new Error('채널 ID를 추출할 수 없습니다.');
-                    }
-                    
-                    response = await fetch(`${baseURL}/channel/${channelId}`, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                }
-                
-                // 응답 확인
-                if (response.ok) {
-                    // 분석 요청 성공하면 결과 페이지로 이동
-                    if (currentType === 'video') {
-                        window.location.href = `watch_result.html?type=video&id=${videoId}`;
-                    } else if (currentType === 'channel') {
-                        window.location.href = `channel_result.html?type=channel&id=${channelId}`;
-                    }
-                } else {
-                    throw new Error(`서버 오류: ${response.status} ${response.statusText}`);
-                }
-                
-            } catch (error) {
-                console.error('전송 오류:', error);
-                alert(`전송 실패: ${error.message}\n\n서버가 실행 중인지 확인해주세요.`);
-            } finally {
-                // 로딩 숨기고 버튼 다시 표시
-                loading.style.display = 'none';
-                startBtn.style.display = 'block';
+            // 즉시 결과 페이지로 이동 (fetch 없이)
+            if (currentType === 'video') {
+                window.location.href = `watch_result.html?type=video&id=${id}`;
+            } else if (currentType === 'channel') {
+                window.location.href = `channel_result.html?type=channel&id=${id}`;
             }
         });
 

@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientRequestException;
 
-import com.example.youtube_comment_analysis.AiSender;
+import com.example.youtube_comment_analysis.ai.AiSender;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -40,9 +40,10 @@ public class VideoService {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
+    //영상 개별 데이터 조회 함수
     public VideoAnalysisResponse getVideoData(String videoId, int limit) {
         try {
-            // --- 영상 메타데이터 조회 ---
+            //영상 메타데이터 조회
             String videoJson = yt.get()
                     .uri(b -> b.path("/videos")
                             .queryParam("part", "snippet,statistics")
@@ -61,7 +62,7 @@ public class VideoService {
             
             VideoMeta meta = parseVideoMeta(videoJson);
 
-            // --- 댓글 데이터 조회 ---
+            //댓글 데이터 조회
             List<CommentDto> comments = new ArrayList<>();
             String pageToken = null;
             int remain = Math.max(0, limit);
@@ -124,30 +125,21 @@ public class VideoService {
 
             int beforeBot = comments.size();
 
-            // --- AI Sender 호출 (FastAPI와 연동) ---
+            //AI Sender 호출 (FastAPI와 연동)
             var sendResult = aiSender.send(comments);
 
-            // ✅ 감정 통계 계산
+            //감정 통계 계산
             ZoneId zone = ZoneId.of("Asia/Seoul");
             StatsDto stats = buildStats(sendResult.comments(), zone);
 
             int afterBot = sendResult.comments().size();
-
-            //테스트 코드
-            List<Integer> list=analyzeCommentsActivity(comments).getTopActiveHours();
-            
-            for(int l:list) {
-            	System.out.println(l);
-            }
-            //테스트 코드
           
             return new VideoAnalysisResponse(
                     meta,
                     sendResult.comments(),
-                    sendResult.totalDetectedBotCount(),
                     sendResult.topKeywordGlobal(),
                     stats,
-                    beforeBot,            // ✅ 추가
+                    beforeBot,           
                     afterBot
             );
             
@@ -186,7 +178,7 @@ public class VideoService {
         }
     }
 
-    // --- 추가: 댓글 활동 분석 ---
+    //댓글 활동 분석
     public AnalysisDto analyzeCommentsActivity(List<CommentDto> comments) {
         
         if (comments == null || comments.isEmpty()) {

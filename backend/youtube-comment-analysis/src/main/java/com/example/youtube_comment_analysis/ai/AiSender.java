@@ -1,4 +1,4 @@
-package com.example.youtube_comment_analysis;
+package com.example.youtube_comment_analysis.ai;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import com.example.youtube_comment_analysis.ai.AiSentimentRequest.Comment;
+import com.example.youtube_comment_analysis.ai.AiSentimentRequest.Trace;
 import com.example.youtube_comment_analysis.video.CommentDto;
 
 import lombok.extern.slf4j.Slf4j;
@@ -42,14 +44,14 @@ public class AiSender {
 	@Value("${fastapi.max-batch:500}")
     private int maxBatch;
 	
+	//ai서버에 댓글 전송 함수
 	public SendResult send(List<CommentDto> allComments) {
 		if (allComments == null || allComments.isEmpty()) {
-            return new SendResult(List.of(), 0, List.of());
+            return new SendResult(List.of(), List.of());
         }
 			
 		List<List<CommentDto>> batches = chunk(allComments, Math.max(1, maxBatch));
 		
-		int totalBots=0;
 	    Map<String, Integer> globalKeyword=new HashMap<>(256);
 	    Set<String> seenIds=new HashSet<>();
 	    List<CommentDto> keptAll=new ArrayList<>();
@@ -94,11 +96,10 @@ public class AiSender {
 					
 	                AiSentimentResponse body = resp.getBody();
 	                
-	                totalBots += (body.detectedBotCount() != null ? body.detectedBotCount() : 0);
-	                
 	                if (body.topKeyword() != null) {
 	                    for (KeywordCount kc : body.topKeyword()) {
-	                        if (kc == null || kc.keyword() == null) continue;
+	                        if (kc == null || kc.keyword() == null) 
+	                        	continue;
 	                        String key = kc.keyword().trim();
 	                        int add = Math.max(0, kc.count());
 	                        globalKeyword.merge(key, add, Integer::sum);
@@ -175,7 +176,7 @@ public class AiSender {
 	        .map(e -> new KeywordCount(e.getKey(), e.getValue()))
 	        .toList();
 		
-	    return new SendResult(keptAll, totalBots, topKeywordGlobal);
+	    return new SendResult(keptAll, topKeywordGlobal);
 	}
 	 
 	 private static List<List<CommentDto>> chunk(List<CommentDto> list, int size) {
