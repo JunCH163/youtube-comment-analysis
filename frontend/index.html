@@ -326,19 +326,26 @@
         // YouTube URL 패턴 정규식
         const youtubePatterns = {
             video: [
-                /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)/,
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/)/,
                 /youtube\.com\/watch\?.*v=/
             ],
             channel: [
                 /youtube\.com\/channel\//,
                 /youtube\.com\/c\//,
                 /youtube\.com\/user\//,
-                /youtube\.com\/@/
+                /youtube\.com\/@[\w가-힣]+/u
             ]
         };
 
         function analyzeURL(url) {
             if (!url) return null;
+
+                // URL 디코딩 (한글 등 인코딩된 문자 처리)
+            try {
+                url = decodeURIComponent(url);
+            } catch (e) {
+                // 디코딩 실패 시 원본 사용
+            }
             
             // 비디오 URL 체크
             for (const pattern of youtubePatterns.video) {
@@ -407,7 +414,8 @@
             const patterns = [
                 /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
                 /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-                /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/
+                /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
             ];
             
             for (const pattern of patterns) {
@@ -421,6 +429,14 @@
         
         // URL에서 channelId 추출 함수
         function extractChannelId(url) {
+            // URL 디코딩 (한글 등 인코딩된 문자 처리)
+            try {
+                url = decodeURIComponent(url);
+            } catch (e) {
+                // 디코딩 실패 시 원본 사용
+            }
+
+
             // channel/로 시작하는 경우
             let match = url.match(/youtube\.com\/channel\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
@@ -428,7 +444,7 @@
             }
             
             // @username 형식인 경우
-            match = url.match(/youtube\.com\/@([a-zA-Z0-9_-]+)/);
+            match = url.match(/youtube\.com\/@([\w가-힣]+)/u);
             if (match && match[1]) {
                 return match[1];
             }
