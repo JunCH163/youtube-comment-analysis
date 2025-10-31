@@ -26,19 +26,39 @@
             background: rgba(30, 30, 30, 0.9);
             backdrop-filter: blur(15px);
             padding: 1rem 2rem;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem; 
+        }
+
+        .home-button {
+            color: #ffffff;
+            background: #282828;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.2rem;
+            border: 2px solid #667eea;
+            transition: background 0.2s;
+        }
+        
+        .home-button:hover {
+            background: rgba(#667eea, 0.1);
         }
 
         .header h1 {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
             color: #ffffff;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.3s ease;
-        }
-
-        .header h1:hover {
-            opacity: 0.8;
+            margin: 0;
         }
 
         .container {
@@ -365,12 +385,13 @@
 </head>
 <body>
     <header class="header">
-        <h1 onclick="window.location.href='index.html'">LDB</h1>
+        <div class="header-content">
+            <a href="index.html" class="home-button">LDB</a>
+            <h1>YouTube 영상 분석 대시보드</h1>
+        </div>
     </header>
 
     <div class="container">
-        <h1 class="page-title">분석 결과 대시보드</h1>
-
         <!-- 로딩 화면 -->
         <div class="loading-screen" id="loadingScreen">
             <div class="loading-spinner"></div>
