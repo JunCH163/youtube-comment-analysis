@@ -28,7 +28,7 @@
   "pad_token_id": 0,
   "position_embedding_type": "absolute",
   "problem_type": "single_label_classification",
-  "transformers_version": "4.56.1",
+  "transformers_version": "4.57.1",
   "type_vocab_size": 2,
   "use_cache": true,
   "vocab_size": 32000
