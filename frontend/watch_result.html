@@ -386,7 +386,7 @@
 <body>
     <header class="header">
         <div class="header-content">
-            <a href="index.html" class="home-button">LDB</a>
+            <a href="/index.html" class="home-button">LDB</a>
             <h1>YouTube 영상 분석 대시보드</h1>
         </div>
     </header>
@@ -586,7 +586,7 @@
                 document.getElementById('loadingScreen').innerHTML = `
                     <p style="color: #dc3545; font-size: 1.2rem;">데이터 처리 중 오류가 발생했습니다.</p>
                     <p style="color: #888; margin-top: 1rem;">${error.message}</p>
-                    <button onclick="window.location.href='/'" style="
+                    <button onclick="window.location.href='/index.html'" style="
                         margin-top: 2rem;
                         padding: 0.75rem 2rem;
                         background: #667eea;
@@ -811,7 +811,7 @@
             
             if (!type || !id) {
                 alert('잘못된 접근입니다.');
-                window.location.href = 'index.html';
+                window.location.href = '/index.html';
                 return;
             }
             
@@ -846,7 +846,7 @@
                     document.getElementById('loadingScreen').innerHTML = `
                         <p style="color: #dc3545; font-size: 1.2rem;">분석 결과를 불러오는데 실패했습니다.</p>
                         <p style="color: #888; margin-top: 1rem;">${error.message}</p>
-                        <button onclick="window.location.href='index.html'" style="
+                        <button onclick="window.location.href='/index.html'" style="
                             margin-top: 2rem;
                             padding: 0.75rem 2rem;
                             background: #667eea;
