@@ -17,8 +17,10 @@ import com.example.youtube_comment_analysis.ai.AiSender;
 import com.example.youtube_comment_analysis.ai.KeywordCount;
 import com.example.youtube_comment_analysis.error.ChannelAnalysisException;
 import com.example.youtube_comment_analysis.error.ChannelNotFoundException;
+import com.example.youtube_comment_analysis.error.CommentsDisabledException;
 import com.example.youtube_comment_analysis.error.ExternalServiceException;
 import com.example.youtube_comment_analysis.error.PlaylistEmptyException;
+import com.example.youtube_comment_analysis.error.VideoAnalysisException;
 import com.example.youtube_comment_analysis.video.VideoAnalysisResponse;
 import com.example.youtube_comment_analysis.video.VideoMeta;
 import com.example.youtube_comment_analysis.video.VideoService;
@@ -124,14 +126,19 @@ public class ChannelService {
 					neu+=vr.NEUTRAL();
 					neg+=vr.NEGATIVE();
 				}
+				catch(CommentsDisabledException e) {
+			        log.info("댓글 비활성화 영상 건너뜀: videoId={}", videoId);
+			        continue;  // 다음 영상으로
+			    }
 				catch(Exception e) {
 					log.warn("video analysis failed: videoId={}", videoId, e);
+					throw new VideoAnalysisException("영상 분석 실패",e);
 				}
 			}
 			
 			if(videos.isEmpty()) {
 				//채널만 있고 영상이 없음
-				return new ChannelAnalysisResponse(meta, List.of(), List.of(), 0, 0, 0, 0, 0);
+				throw new VideoAnalysisException("분석 가능한 영상이 없음: 모든 영상의 댓글이 비활성화되었거나 분석 실패");
 			}
 			
 			
@@ -195,8 +202,14 @@ public class ChannelService {
             String thumbnails = snippet.path("thumbnails").path("high").path("url").asText(null);
             
             Long viewCount=statistics.path("viewCount").asLong();
-            Long subscriberCount=statistics.path("subscriberCount").asLong();
+            boolean hiddenSubscriberCount=statistics.path("hiddenSubscriberCount").asBoolean();
+            Long subscriberCount=null;
+            if(!hiddenSubscriberCount) {
+            	subscriberCount=statistics.path("subscriberCount").asLong();
+            }
             Long videoCount=statistics.path("videoCount").asLong();
+            
+            
             
 
             return new ChannelMeta(id, title, description, publishedAt, thumbnails, viewCount, subscriberCount, videoCount);

@@ -115,4 +115,28 @@ public class GlobalExceptionHandler {
 	    );
 	    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
 	}
+	
+	@ExceptionHandler(VideoAnalysisException.class)
+	public ResponseEntity<ApiErrorResponse> handleVideoAnalysis(VideoAnalysisException ex, HttpServletRequest req) {
+	    var body = ApiErrorResponse.of(
+	        HttpStatus.INTERNAL_SERVER_ERROR.value(),
+	        "Video Analysis Failed",
+	        ex.getMessage(),
+	        req.getRequestURI(),
+	        traceId()
+	    );
+	    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+	}
+	
+	@ExceptionHandler(CommentsDisabledException.class)
+	public ResponseEntity<ApiErrorResponse> handleCommentsDisabled(CommentsDisabledException ex, HttpServletRequest req) {
+	    var body = ApiErrorResponse.of(
+	        HttpStatus.UNPROCESSABLE_ENTITY.value(),  // 422
+	        "Comments Disabled",
+	        ex.getMessage(),
+	        req.getRequestURI(),
+	        traceId()
+	    );
+	    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(body);
+	}
 }

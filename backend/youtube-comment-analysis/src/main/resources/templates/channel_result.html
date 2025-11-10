@@ -6,10 +6,6 @@
     <title>채널 분석 대시보드 - YouTube Comment Analyzer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
-        /*
-         * 전반적인 스타일
-         */
-        /* 새로운 강조색: #D64545 */
         :root {
             --accent-color: #D64545;
             --accent-color-rgb: 214, 69, 69;
@@ -22,7 +18,6 @@
         }
         
         body {
-            /* 배경 이미지와 어두운 오버레이 */
             background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.99)), url('https://cdn.pixabay.com/photo/2022/02/21/06/42/tablet-7025900_1280.jpg');
             background-size: cover;
             background-position: center;
@@ -32,14 +27,13 @@
             color: #ffffff;
         }
         
-        /* 헤더 스타일 */
         .header {
             background: rgba(30, 30, 30, 0.9);
             backdrop-filter: blur(15px);
             padding: 1rem 2rem;
             box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
             margin-bottom: 2rem;
-            border-bottom: 2px solid var(--accent-color); /* 색상 변경 */
+            border-bottom: 2px solid var(--accent-color);
         }
         
         .header-content {
@@ -56,30 +50,28 @@
             text-decoration: none;
             font-weight: 700;
             font-size: 1.2rem;
-            border: 2px solid var(--accent-color); /* 색상 변경 */
+            border: 2px solid var(--accent-color);
             transition: background 0.2s;
         }
         
         .home-button:hover {
-            background: rgba(var(--accent-color-rgb), 0.1); /* 색상 변경 */
+            background: rgba(var(--accent-color-rgb), 0.1);
         }
 
         .header h1 {
             font-size: 1.8rem;
             font-weight: 700;
             letter-spacing: 0.5px;
-            color: #ffffff; /* 색상 변경 */
+            color: #ffffff;
             margin: 0;
         }
         
-        /* 대시보드 레이아웃 */
         .dashboard-container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 1rem 2rem;
         }
 
-        /* 공통 카드 스타일 */
         .card {
             background: rgba(30, 30, 30, 0.8);
             backdrop-filter: blur(10px);
@@ -90,7 +82,6 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        /* 채널 프로필 섹션 */
         .channel-profile {
             display: flex;
             align-items: center;
@@ -102,16 +93,15 @@
             height: 80px;
             border-radius: 50%;
             object-fit: cover;
-            border: 3px solid var(--accent-color); /* 색상 변경 */
+            border: 3px solid var(--accent-color);
         }
 
         .channel-info h2 {
             font-size: 1.8rem;
-            color: #ffffff; /* 색상 변경 */
+            color: #ffffff;
             font-weight: 600;
         }
         
-        /* 주요 통계 그리드 */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -140,10 +130,9 @@
             line-height: 1.2;
         }
 
-        /* 차트 및 영상 정보 컨테이너 */
         .content-grid {
             display: grid;
-            grid-template-columns: 1.5fr 1fr; /* 차트 2/3, 영상정보 1/3 */
+            grid-template-columns: 1.5fr 1fr;
             gap: 1.5rem;
             margin-top: 1.5rem;
         }
@@ -154,7 +143,6 @@
             }
         }
 
-        /* 차트 컨테이너 */
         .chart-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -170,9 +158,9 @@
         
         .chart-box h3 {
             font-size: 1.25rem;
-            color: #ffffff; /* 색상 변경 */
+            color: #ffffff;
             margin-bottom: 2.5rem;
-            border-bottom: 2px solid rgba(var(--accent-color-rgb), 0.3); /* 색상 변경 */
+            border-bottom: 2px solid rgba(var(--accent-color-rgb), 0.3);
             padding-bottom: 1.5rem;
             width: 100%;
             text-align: center;
@@ -199,10 +187,9 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
-        /* 영상 정보 리스트 */
         .video-info-list h3 {
             font-size: 1.4rem;
-            color: #ffffff; /* 색상 변경 */
+            color: #ffffff;
             margin-bottom: 1rem;
         }
         
@@ -222,10 +209,9 @@
             height: auto;
             border-radius: 6px;
             object-fit: cover;
-            flex-shrink: 0; /* 내용이 줄어들어도 썸네일 크기 유지 */
+            flex-shrink: 0;
         }
 
-        /* 영상 상세 정보 컨테이너 */
         .video-details {
             flex-grow: 1;
         }
@@ -247,35 +233,57 @@
         }
 
         .video-box a {
-            color: var(--accent-color); /* 색상 변경 */
+            color: var(--accent-color);
             text-decoration: none;
             font-weight: 600;
             display: block;
             margin-top: 0.5rem;
         }
         
-        /* 키워드 클라우드 스타일 */
         .keyword-cloud-container {
             display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 1rem;
+            flex-direction: column;
+            gap: 0.3rem;
+            margin-top: 0.1rem;
             justify-content: center;
+            height: 100%;
+            flex: 1;
+        }
+
+        .keyword-item {
+            background: rgba(40, 40, 40, 0.9);
+            padding: 1.5rem 2rem;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            min-height: 100px;
+            transition: background 0.2s, transform 0.2s;
         }
 
-        .keyword-tag {
-            background: var(--accent-color); /* 색상 변경 */
-            color: white;
-            padding: 0.4rem 0.8rem;
-            border-radius: 20px;
+        .keyword-item:hover {
+            background: rgba(50, 50, 50, 0.9);
+            transform: translateX(5px);
+        }
+
+        .keyword-item .keyword-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .keyword-item .keyword-count {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        .keyword-item .keyword-count::after {
+            content: "점";
             font-size: 0.9rem;
-            font-weight: 500;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            color: #aaa;
+            margin-left: 0.3rem;
         }
 
-        /* Chart.js 툴팁 스타일 재정의 */
         .chartjs-tooltip {
             background: rgba(0, 0, 0, 0.7) !important;
             border-radius: 6px !important;
@@ -338,25 +346,25 @@
 
         .avg-stats-grid {
             display: grid;
-            gap: 1.5rem;
-            flex: 1; /* 남은 공간 모두 차지 */
-            align-content: space-evenly; /* 아이템들을 균등하게 분산 */
+            gap: 0.1rem;
+            flex: 1;
+            align-content: space-evenly;
         }
 
         .avg-stat-item {
             background: rgba(40, 40, 40, 0.9);
-            padding: 2rem 1.75rem; /* 세로 패딩 크게 증가 */
+            padding: 2rem 1.75rem;
             border-radius: 10px;
             display: flex;
-            flex-direction: column; /* 세로 배치로 변경 */
-            align-items: center; /* 중앙 정렬 */
-            gap: 1rem; /* label과 value 사이 간격 */
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
             transition: background 0.2s, transform 0.2s;
         }
 
         .avg-stat-item:hover {
             background: rgba(50, 50, 50, 0.9);
-            transform: scale(1.02); /* 살짝 확대 효과 */
+            transform: scale(1.02);
         }
 
         .avg-stat-item .label {
@@ -367,7 +375,7 @@
         }
 
         .avg-stat-item .value {
-            font-size: 2.5rem; /* 폰트 크기 대폭 증가 */
+            font-size: 2.5rem;
             font-weight: 700;
             color: #ffffff;
             line-height: 1;
@@ -439,7 +447,7 @@
         }
 
         .channel-profile-card {
-            position: relative; /* 버튼 절대 위치를 위한 설정 */
+            position: relative;
         }
 
         .youtube-channel-button {
@@ -476,7 +484,7 @@
 
     <header class="header">
         <div class="header-content">
-            <a href="index(10_28).html" class="home-button">LDB</a>
+            <a href="index.html" class="home-button">LDB</a>
             <h1>YouTube 채널 분석 대시보드</h1>
         </div>
     </header>
@@ -635,35 +643,47 @@
         }
 
         function updateDashboard() {
+            let mostViewedVideo = [];
+            let mostRecentVideo = [];
 
             try{
-                //채널 정보 (parsedMeta 사용)
+                //최근 영상중 가장 인기있는 영상 찾기
+                if (analysisData.videoMetas && analysisData.videoMetas.length > 0) {
+                    mostViewedVideo = analysisData.videoMetas.reduce((max, video) => {
+                        return video.viewCount > max.viewCount ? video : max;
+                    });
+                    //가장 최근 영상 찾기
+                    mostRecentVideo = analysisData.videoMetas.reduce((latest, video) => {
+                        return new Date(video.publishedAt) > new Date(latest.publishedAt) ? video : latest;
+                    });
+                }
+
                 document.getElementById('channelNameDisplay').textContent = analysisData.channel.title;
-                document.getElementById('channelLogo').src = analysisData.channel.thumbnail;
+                document.getElementById('channelLogo').src = analysisData.channel.thumbnails;
                 
                 document.getElementById('youtubeChannelLink').href = `https://www.youtube.com/channel/${analysisData.channel.id}`;
                 
                 document.getElementById('subscriberCount').textContent = formatNumber(analysisData.channel.subscriberCount);
-                document.getElementById('viewCount').textContent = formatNumber(analysisData.channel.totalViewCount);
+                document.getElementById('viewCount').textContent = formatNumber(analysisData.channel.viewCount);
                 
                 document.getElementById('videoCount').textContent = analysisData.channel.videoCount;
 
-                const recent = analysisData.mostRecentVideo;
-                document.getElementById('recentVideoThumbnail').src = recent.thumbnail;
+                const recent = mostRecentVideo;
+                document.getElementById('recentVideoThumbnail').src = recent.thumbnails;
                 document.getElementById('recentVideoTitle').textContent = recent.title;
                 document.getElementById('recentVideoViews').textContent = recent.viewCount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                 document.getElementById('recentVideoDate').textContent = new Date(recent.publishedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
-                document.getElementById('recentVideoLink').href = `watch_result.html?type=video&id=${recent.videoId}`;;
+                document.getElementById('recentVideoLink').href = `watch_result.html?type=video&id=${recent.id}`;;
                 document.getElementById('recentVideoLink').setAttribute('aria-label', `${recent.title} 영상 분석`);
 
 
                 //인기 영상 정보 (mostViewedVideo 사용)
-                const mostViewed = analysisData.mostViewedVideo;
-                document.getElementById('mostViewedThumbnail').src = mostViewed.thumbnail;
+                const mostViewed = mostViewedVideo;
+                document.getElementById('mostViewedThumbnail').src = mostViewed.thumbnails;
                 document.getElementById('mostViewedTitle').textContent = mostViewed.title;
                 document.getElementById('mostViewedViews').textContent = mostViewed.viewCount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                 document.getElementById('mostViewedDate').textContent = new Date(mostViewed.publishedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
-                document.getElementById('mostViewedLink').href = `watch_result.html?type=video&id=${mostViewed.videoId}`;
+                document.getElementById('mostViewedLink').href = `watch_result.html?type=video&id=${mostViewed.id}`;
                 document.getElementById('mostViewedLink').setAttribute('aria-label', `${mostViewed.title} 영상 분석`);
 
 
@@ -701,12 +721,11 @@
             if (emotionChart) emotionChart.destroy(); // 기존 차트 파괴
 
             const ctx = document.getElementById('emotionChart').getContext('2d');
-            const emotions = data.sentimentSummaryTotal;
 
-            const total = emotions.POSITIVE + emotions.NEGATIVE + emotions.NEUTRAL;
-            const positivePercent = ((emotions.POSITIVE / total) * 100).toFixed(1);
-            const negativePercent = ((emotions.NEGATIVE / total) * 100).toFixed(1);
-            const neutralPercent = ((emotions.NEUTRAL / total) * 100).toFixed(1);
+            const total = data.POSITIVE + data.NEGATIVE + data.NEUTRAL;
+            const positivePercent = ((data.POSITIVE / total) * 100).toFixed(1);
+            const negativePercent = ((data.NEGATIVE / total) * 100).toFixed(1);
+            const neutralPercent = ((data.NEUTRAL / total) * 100).toFixed(1);
 
             emotionChart = new Chart(ctx, {
                 type: 'doughnut',
@@ -724,7 +743,7 @@
                     maintainAspectRatio: true,
                     plugins: {
                         legend: {
-                            display: false // 범례는 별도로 HTML로 표시
+                            display: false
                         },
                         tooltip: {
                             callbacks: {
@@ -748,16 +767,21 @@
 
         function createKeywordCloud(data) {
             const container = document.getElementById('keywordCloud');
-            container.innerHTML = ''; // 기존 내용 초기화
+            container.innerHTML = '';
             
-            const keywords = data.topKeywordsAcross5; // analysisData에 있다고 가정
+            const keywords = data.topKeywordGlobal;
             
             if (keywords && keywords.length > 0) {
-                keywords.forEach(item  => {
-                    const tag = document.createElement('span');
-                    tag.className = 'keyword-tag';
-                    tag.textContent = tag.textContent = `${item.keyword}`;
-                    container.appendChild(tag);
+                keywords.forEach((item, index) => {
+                    const keywordDiv = document.createElement('div');
+                    keywordDiv.className = 'keyword-item';
+                    
+                    keywordDiv.innerHTML = `
+                        <span class="keyword-name">${index + 1}. ${item.keyword}</span>
+                        <span class="keyword-count">${item.count}</span>
+                    `;
+                    
+                    container.appendChild(keywordDiv);
                 });
             } else {
                 container.textContent = '분석된 키워드가 없습니다.';
@@ -766,7 +790,7 @@
         }
 
         function updateRecentVideosSection(data) {
-            const videos = data.recentVideos;
+            const videos = data.videoMetas;
             
             // 평균 통계 계산
             let totalViews = 0;
@@ -795,11 +819,11 @@
                 const videoItem = document.createElement('div');
                 videoItem.className = 'recent-video-item';
                 videoItem.onclick = () => {
-                    window.open(`watch_result_page(10_27).html?type=video&id=${video.videoId}`, '_blank');
+                    window.open(`watch_result.html?type=video&id=${video.id}`, '_blank');
                 };
                 
                 videoItem.innerHTML = `
-                    <img src="${video.thumbnail}" alt="${video.title}" class="recent-video-thumbnail" onerror="this.src='https://placehold.co/120x67/333/white?text=No+Img'">
+                    <img src="${video.thumbnails}" alt="${video.title}" class="recent-video-thumbnail" onerror="this.src='https://placehold.co/120x67/333/white?text=No+Img'">
                     <div class="recent-video-details">
                         <div class="recent-video-title">${video.title}</div>
                         <div class="recent-video-stats">
@@ -815,7 +839,7 @@
             });
         }
 
-        // 페이지 로드 시 URL에서 파라미터 추출 후 백엔드 요청
+                // 페이지 로드 시 URL에서 파라미터 추출 후 백엔드 요청
         document.addEventListener('DOMContentLoaded', async () => {
             const params = new URLSearchParams(window.location.search);
             const type = params.get('type');

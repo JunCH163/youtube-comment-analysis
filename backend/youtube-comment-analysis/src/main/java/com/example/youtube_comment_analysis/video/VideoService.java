@@ -24,6 +24,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 
 import com.example.youtube_comment_analysis.ai.AiSender;
 import com.example.youtube_comment_analysis.ai.SendResult;
+import com.example.youtube_comment_analysis.error.CommentsDisabledException;
 import com.example.youtube_comment_analysis.error.ExternalServiceException;
 import com.example.youtube_comment_analysis.error.VideoAnalysisException;
 import com.example.youtube_comment_analysis.error.VideoNotFoundException;
@@ -32,6 +33,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.netty.handler.timeout.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
 
 @Service
 @Slf4j
@@ -98,6 +100,8 @@ public class VideoService {
                                 .queryParamIfPresent("pageToken", Optional.ofNullable(token))
                                 .build())
                         .retrieve()
+                        .onStatus(status -> status.value() == 403, res ->
+                        Mono.error(new CommentsDisabledException("댓글 비활성화: " + videoId)))
                         .onStatus(HttpStatusCode::is4xxClientError, res ->
                         	res.bodyToMono(String.class).map(body ->
                         		new ExternalServiceException("YouTube 4xx on /commentThreads: " + body, null)))
@@ -190,6 +194,9 @@ public class VideoService {
         }
         catch (ExternalServiceException e) {
             throw e; // 그대로 502/504로 올림
+        }
+        catch(CommentsDisabledException e) {
+        	throw e;
         }
         catch (Exception e) {
             // 파싱/로직 등 나머지 내부 오류

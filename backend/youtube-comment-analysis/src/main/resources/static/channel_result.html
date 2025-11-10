@@ -244,7 +244,7 @@
             display: flex;
             flex-direction: column;
             gap: 0.3rem;
-            margin-top: 1rem;
+            margin-top: 0.1rem;
             justify-content: center;
             height: 100%;
             flex: 1;
@@ -346,7 +346,7 @@
 
         .avg-stats-grid {
             display: grid;
-            gap: 1.5rem;
+            gap: 0.1rem;
             flex: 1;
             align-content: space-evenly;
         }
@@ -484,7 +484,7 @@
 
     <header class="header">
         <div class="header-content">
-            <a href="index(10_28).html" class="home-button">LDB</a>
+            <a href="index.html" class="home-button">LDB</a>
             <h1>YouTube 채널 분석 대시보드</h1>
         </div>
     </header>
@@ -528,8 +528,10 @@
 
         <!-- 차트 및 영상 정보 -->
         <div class="content-grid">
+            
             <!-- 차트 영역 -->
             <div class="chart-container">
+                
                 <!-- 댓글 감정 분석 차트 -->
                 <div class="card chart-box">
                     <h3>댓글 감정 분석</h3>
@@ -553,7 +555,9 @@
                 <!-- 키워드 클라우드 -->
                 <div class="card">
                     <h3>인기 키워드 (댓글 기반)</h3>
-                    <div id="keywordCloud" class="keyword-cloud-container"></div>
+                    <div id="keywordCloud" class="keyword-cloud-container">
+                        <!-- 키워드 태그가 여기에 삽입됩니다 -->
+                    </div>
                 </div>
 
             </div>
@@ -615,6 +619,7 @@
     </div>
 
     <script>
+        // Chart.js 인스턴스를 저장할 변수
         let emotionChart = null;
         let analysisData = null;
 
@@ -638,35 +643,47 @@
         }
 
         function updateDashboard() {
+            let mostViewedVideo = [];
+            let mostRecentVideo = [];
 
             try{
-                //채널 정보 (parsedMeta 사용)
+                //최근 영상중 가장 인기있는 영상 찾기
+                if (analysisData.videoMetas && analysisData.videoMetas.length > 0) {
+                    mostViewedVideo = analysisData.videoMetas.reduce((max, video) => {
+                        return video.viewCount > max.viewCount ? video : max;
+                    });
+                    //가장 최근 영상 찾기
+                    mostRecentVideo = analysisData.videoMetas.reduce((latest, video) => {
+                        return new Date(video.publishedAt) > new Date(latest.publishedAt) ? video : latest;
+                    });
+                }
+
                 document.getElementById('channelNameDisplay').textContent = analysisData.channel.title;
-                document.getElementById('channelLogo').src = analysisData.channel.thumbnail;
+                document.getElementById('channelLogo').src = analysisData.channel.thumbnails;
                 
                 document.getElementById('youtubeChannelLink').href = `https://www.youtube.com/channel/${analysisData.channel.id}`;
                 
                 document.getElementById('subscriberCount').textContent = formatNumber(analysisData.channel.subscriberCount);
-                document.getElementById('viewCount').textContent = formatNumber(analysisData.channel.totalViewCount);
+                document.getElementById('viewCount').textContent = formatNumber(analysisData.channel.viewCount);
                 
                 document.getElementById('videoCount').textContent = analysisData.channel.videoCount;
 
-                const recent = analysisData.mostRecentVideo;
-                document.getElementById('recentVideoThumbnail').src = recent.thumbnail;
+                const recent = mostRecentVideo;
+                document.getElementById('recentVideoThumbnail').src = recent.thumbnails;
                 document.getElementById('recentVideoTitle').textContent = recent.title;
                 document.getElementById('recentVideoViews').textContent = recent.viewCount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                 document.getElementById('recentVideoDate').textContent = new Date(recent.publishedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
-                document.getElementById('recentVideoLink').href = `watch_result.html?type=video&id=${recent.videoId}`;;
+                document.getElementById('recentVideoLink').href = `watch_result.html?type=video&id=${recent.id}`;;
                 document.getElementById('recentVideoLink').setAttribute('aria-label', `${recent.title} 영상 분석`);
 
 
                 //인기 영상 정보 (mostViewedVideo 사용)
-                const mostViewed = analysisData.mostViewedVideo;
-                document.getElementById('mostViewedThumbnail').src = mostViewed.thumbnail;
+                const mostViewed = mostViewedVideo;
+                document.getElementById('mostViewedThumbnail').src = mostViewed.thumbnails;
                 document.getElementById('mostViewedTitle').textContent = mostViewed.title;
                 document.getElementById('mostViewedViews').textContent = mostViewed.viewCount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
                 document.getElementById('mostViewedDate').textContent = new Date(mostViewed.publishedAt).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit' });
-                document.getElementById('mostViewedLink').href = `watch_result.html?type=video&id=${mostViewed.videoId}`;
+                document.getElementById('mostViewedLink').href = `watch_result.html?type=video&id=${mostViewed.id}`;
                 document.getElementById('mostViewedLink').setAttribute('aria-label', `${mostViewed.title} 영상 분석`);
 
 
@@ -704,12 +721,11 @@
             if (emotionChart) emotionChart.destroy(); // 기존 차트 파괴
 
             const ctx = document.getElementById('emotionChart').getContext('2d');
-            const emotions = data.sentimentSummaryTotal;
 
-            const total = emotions.POSITIVE + emotions.NEGATIVE + emotions.NEUTRAL;
-            const positivePercent = ((emotions.POSITIVE / total) * 100).toFixed(1);
-            const negativePercent = ((emotions.NEGATIVE / total) * 100).toFixed(1);
-            const neutralPercent = ((emotions.NEUTRAL / total) * 100).toFixed(1);
+            const total = data.POSITIVE + data.NEGATIVE + data.NEUTRAL;
+            const positivePercent = ((data.POSITIVE / total) * 100).toFixed(1);
+            const negativePercent = ((data.NEGATIVE / total) * 100).toFixed(1);
+            const neutralPercent = ((data.NEUTRAL / total) * 100).toFixed(1);
 
             emotionChart = new Chart(ctx, {
                 type: 'doughnut',
@@ -753,7 +769,7 @@
             const container = document.getElementById('keywordCloud');
             container.innerHTML = '';
             
-            const keywords = data.topKeywordsAcross5;
+            const keywords = data.topKeywordGlobal;
             
             if (keywords && keywords.length > 0) {
                 keywords.forEach((item, index) => {
@@ -774,7 +790,7 @@
         }
 
         function updateRecentVideosSection(data) {
-            const videos = data.recentVideos;
+            const videos = data.videoMetas;
             
             // 평균 통계 계산
             let totalViews = 0;
@@ -803,11 +819,11 @@
                 const videoItem = document.createElement('div');
                 videoItem.className = 'recent-video-item';
                 videoItem.onclick = () => {
-                    window.open(`watch_result_page(10_27).html?type=video&id=${video.videoId}`, '_blank');
+                    window.open(`watch_result.html?type=video&id=${video.id}`, '_blank');
                 };
                 
                 videoItem.innerHTML = `
-                    <img src="${video.thumbnail}" alt="${video.title}" class="recent-video-thumbnail" onerror="this.src='https://placehold.co/120x67/333/white?text=No+Img'">
+                    <img src="${video.thumbnails}" alt="${video.title}" class="recent-video-thumbnail" onerror="this.src='https://placehold.co/120x67/333/white?text=No+Img'">
                     <div class="recent-video-details">
                         <div class="recent-video-title">${video.title}</div>
                         <div class="recent-video-stats">
@@ -823,7 +839,7 @@
             });
         }
 
-        // 페이지 로드 시 URL에서 파라미터 추출 후 백엔드 요청
+                // 페이지 로드 시 URL에서 파라미터 추출 후 백엔드 요청
         document.addEventListener('DOMContentLoaded', async () => {
             const params = new URLSearchParams(window.location.search);
             const type = params.get('type');
