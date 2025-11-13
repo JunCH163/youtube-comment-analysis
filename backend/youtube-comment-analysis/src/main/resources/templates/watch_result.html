@@ -13,7 +13,7 @@
         }
         
         body {
-            background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), url('https://cdn.pixabay.com/photo/2022/02/21/06/42/tablet-7025900_1280.jpg');
+            background: linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.99)), url('https://cdn.pixabay.com/photo/2022/02/21/06/42/tablet-7025900_1280.jpg');
             background-size: cover;
             background-position: center;
             background-attachment: fixed;
@@ -26,19 +26,39 @@
             background: rgba(30, 30, 30, 0.9);
             backdrop-filter: blur(15px);
             padding: 1rem 2rem;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem; 
+        }
+
+        .home-button {
+            color: #ffffff;
+            background: #282828;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.2rem;
+            border: 2px solid #667eea;
+            transition: background 0.2s;
+        }
+        
+        .home-button:hover {
+            background: rgba(#667eea, 0.1);
         }
 
         .header h1 {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
             color: #ffffff;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.3s ease;
-        }
-
-        .header h1:hover {
-            opacity: 0.8;
+            margin: 0;
         }
 
         .container {
@@ -365,12 +385,13 @@
 </head>
 <body>
     <header class="header">
-        <h1 onclick="window.location.href='index.html'">LDB</h1>
+        <div class="header-content">
+            <a href="/index.html" class="home-button">LDB</a>
+            <h1>YouTube 영상 분석 대시보드</h1>
+        </div>
     </header>
 
     <div class="container">
-        <h1 class="page-title">분석 결과 대시보드</h1>
-
         <!-- 로딩 화면 -->
         <div class="loading-screen" id="loadingScreen">
             <div class="loading-spinner"></div>
@@ -565,7 +586,7 @@
                 document.getElementById('loadingScreen').innerHTML = `
                     <p style="color: #dc3545; font-size: 1.2rem;">데이터 처리 중 오류가 발생했습니다.</p>
                     <p style="color: #888; margin-top: 1rem;">${error.message}</p>
-                    <button onclick="window.location.href='/'" style="
+                    <button onclick="window.location.href='/index.html'" style="
                         margin-top: 2rem;
                         padding: 0.75rem 2rem;
                         background: #667eea;
@@ -790,7 +811,7 @@
             
             if (!type || !id) {
                 alert('잘못된 접근입니다.');
-                window.location.href = 'index.html';
+                window.location.href = '/index.html';
                 return;
             }
             
@@ -802,7 +823,7 @@
             async function checkAnalysisStatus() {
                 try {
                     attempts++;
-                    const response = await fetch(`http://localhost:8080/${type}/${id}`);
+                    const response = await fetch(`/${type}/${id}`);
                     
                     if (response.ok) {
                         analysisData = await response.json();
@@ -825,7 +846,7 @@
                     document.getElementById('loadingScreen').innerHTML = `
                         <p style="color: #dc3545; font-size: 1.2rem;">분석 결과를 불러오는데 실패했습니다.</p>
                         <p style="color: #888; margin-top: 1rem;">${error.message}</p>
-                        <button onclick="window.location.href='index.html'" style="
+                        <button onclick="window.location.href='/index.html'" style="
                             margin-top: 2rem;
                             padding: 0.75rem 2rem;
                             background: #667eea;

@@ -59,7 +59,8 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
             max-width: 600px;
             width: 100%;
-            border: 1px solid #D64545;
+            border: 2px solid transparent;
+            border-image: linear-gradient(135deg, #D64545, #667eea) 1;
         }
 
         .title {
@@ -276,7 +277,7 @@
 
     <main class="main-container">
         <div class="content fade-in-up">
-            <h1 class="title">유튜브 댓글 분석</h1>
+            <h1 class="title">허수 유튜버 판별</h1>
             <p class="subtitle">YouTube 영상 또는 채널 URL을 붙여넣어 주십시오.</p>
             
             <div class="input-container">
@@ -326,19 +327,26 @@
         // YouTube URL 패턴 정규식
         const youtubePatterns = {
             video: [
-                /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)/,
+                /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/)/,
                 /youtube\.com\/watch\?.*v=/
             ],
             channel: [
                 /youtube\.com\/channel\//,
                 /youtube\.com\/c\//,
                 /youtube\.com\/user\//,
-                /youtube\.com\/@/
+                /youtube\.com\/@[\w가-힣]+/u
             ]
         };
 
         function analyzeURL(url) {
             if (!url) return null;
+
+                // URL 디코딩 (한글 등 인코딩된 문자 처리)
+            try {
+                url = decodeURIComponent(url);
+            } catch (e) {
+                // 디코딩 실패 시 원본 사용
+            }
             
             // 비디오 URL 체크
             for (const pattern of youtubePatterns.video) {
@@ -407,7 +415,8 @@
             const patterns = [
                 /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
                 /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-                /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/
+                /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
             ];
             
             for (const pattern of patterns) {
@@ -421,6 +430,14 @@
         
         // URL에서 channelId 추출 함수
         function extractChannelId(url) {
+            // URL 디코딩 (한글 등 인코딩된 문자 처리)
+            try {
+                url = decodeURIComponent(url);
+            } catch (e) {
+                // 디코딩 실패 시 원본 사용
+            }
+
+
             // channel/로 시작하는 경우
             let match = url.match(/youtube\.com\/channel\/([a-zA-Z0-9_-]+)/);
             if (match && match[1]) {
@@ -428,7 +445,7 @@
             }
             
             // @username 형식인 경우
-            match = url.match(/youtube\.com\/@([a-zA-Z0-9_-]+)/);
+            match = url.match(/youtube\.com\/@([\w가-힣]+)/u);
             if (match && match[1]) {
                 return match[1];
             }
@@ -468,9 +485,9 @@
             
             // 즉시 결과 페이지로 이동 (fetch 없이)
             if (currentType === 'video') {
-                window.location.href = `watch_result.html?type=video&id=${id}`;
+                window.location.href = `/watch_result.html?type=video&id=${id}`;
             } else if (currentType === 'channel') {
-                window.location.href = `channel_result.html?type=channel&id=${id}`;
+                window.location.href = `/channel_result.html?type=channel&id=${id}`;
             }
         });
 
