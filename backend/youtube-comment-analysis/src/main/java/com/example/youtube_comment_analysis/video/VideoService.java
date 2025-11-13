@@ -1,5 +1,6 @@
 package com.example.youtube_comment_analysis.video;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
@@ -24,10 +25,12 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 
 import com.example.youtube_comment_analysis.ai.AiSender;
 import com.example.youtube_comment_analysis.ai.SendResult;
+import com.example.youtube_comment_analysis.cache.VideoCache;
 import com.example.youtube_comment_analysis.error.CommentsDisabledException;
 import com.example.youtube_comment_analysis.error.ExternalServiceException;
 import com.example.youtube_comment_analysis.error.VideoAnalysisException;
 import com.example.youtube_comment_analysis.error.VideoNotFoundException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -41,144 +44,74 @@ public class VideoService {
 
     private final WebClient yt;
     private final AiSender aiSender;
+    private final VideoCache videoCache;
 
-    public VideoService(@Qualifier("youtubeWebClient") WebClient yt, AiSender aiSender) {
+    public VideoService(@Qualifier("youtubeWebClient") WebClient yt, AiSender aiSender, VideoCache videoCache) {
         this.yt = yt;
         this.aiSender = aiSender;
+        this.videoCache=videoCache;
     }
 
     @Value("${youtube.api.key}")
     private String apikey;
 
     private final ObjectMapper mapper = new ObjectMapper();
-
-    //영상 개별 데이터 조회 함수
+    
+    // 캐시 우선 → 미스 시 로더 실행
     public VideoAnalysisResponse getVideoData(String videoId, int limit) {
+        return videoCache.getOrLoadVideoData(videoId, () -> fetchAndAnalyze(videoId, limit));
+    }
+    
+    //L2 미스일 때만 수행: YouTube 메타/댓글 수집 → AI 호출 → 통계 계산 → 대표 댓글 포함 응답 생성 
+    private VideoAnalysisResponse fetchAndAnalyze(String videoId, int fetchCount) {
         try {
-            //영상 메타데이터 조회
+            //영상 메타 데이터 조회
             String videoJson = yt.get()
-                    .uri(b -> b.path("/videos")
-                            .queryParam("part", "id,snippet,statistics")
-                            .queryParam("id", videoId)
-                            .queryParam("key", apikey)
-                            .build())
-                    .retrieve()
-                    .onStatus(HttpStatusCode::is4xxClientError, res ->
-                    	res.bodyToMono(String.class).map(body ->
-                    		new ExternalServiceException("YouTube 4xx on /videos: " + body, null)))
-                    .onStatus(HttpStatusCode::is5xxServerError, res ->
-                    	res.bodyToMono(String.class).map(body ->
-                    		new ExternalServiceException("YouTube 5xx on /videos: " + body, null)))
-                    .bodyToMono(String.class)
-                    .block();
-            
+                .uri(b -> b.path("/videos")
+                    .queryParam("part", "id,snippet,statistics")
+                    .queryParam("id", videoId)
+                    .queryParam("key", apikey)
+                    .build())
+                .retrieve()
+                .onStatus(HttpStatusCode::is4xxClientError, res ->
+                    res.bodyToMono(String.class).map(body ->
+                        new ExternalServiceException("YouTube 4xx on /videos: " + body, null)))
+                .onStatus(HttpStatusCode::is5xxServerError, res ->
+                    res.bodyToMono(String.class).map(body ->
+                        new ExternalServiceException("YouTube 5xx on /videos: " + body, null)))
+                .bodyToMono(String.class)
+                .block();
+
             JsonNode vroot = mapper.readTree(videoJson);
             JsonNode vitems = vroot.path("items");
             if (!vitems.isArray() || vitems.size() == 0) {
                 throw new VideoNotFoundException("비디오를 찾지 못함: videoId=" + videoId);
             }
-            
             VideoMeta meta = parseVideoMeta(videoJson);
 
-            //댓글 데이터 조회
-            List<CommentDto> comments = new ArrayList<>();
-            String pageToken = null;
-            int remain = Math.max(0, limit);
-
-            while (remain > 0) {
-                int pageSize = Math.min(100, remain); // 100개 단위로 요청
-                final String token = pageToken;
-
-                String ctJson = yt.get()
-                        .uri(b -> b.path("/commentThreads")
-                                .queryParam("part", "snippet,replies")
-                                .queryParam("textFormat", "plainText")
-                                .queryParam("order", "time")
-                                .queryParam("maxResults", pageSize)
-                                .queryParam("videoId", videoId)
-                                .queryParam("key", apikey)
-                                .queryParamIfPresent("pageToken", Optional.ofNullable(token))
-                                .build())
-                        .retrieve()
-                        .onStatus(status -> status.value() == 403, res ->
-                        Mono.error(new CommentsDisabledException("댓글 비활성화: " + videoId)))
-                        .onStatus(HttpStatusCode::is4xxClientError, res ->
-                        	res.bodyToMono(String.class).map(body ->
-                        		new ExternalServiceException("YouTube 4xx on /commentThreads: " + body, null)))
-                    .onStatus(HttpStatusCode::is5xxServerError, res ->
-                        	res.bodyToMono(String.class).map(body ->
-                            	new ExternalServiceException("YouTube 5xx on /commentThreads: " + body, null)))
-                        .bodyToMono(String.class)
-                        .block();
-
-                JsonNode croot = mapper.readTree(ctJson);
-                JsonNode citems = croot.path("items");
-
-                if (citems.isArray()) {
-                    for (JsonNode it : citems) {
-                        JsonNode top = it.path("snippet").path("topLevelComment");
-                        String commentId = top.path("id").asText();
-                        JsonNode cs = top.path("snippet");
-                        String author = cs.path("authorDisplayName").asText(null);
-                        String text = cs.path("textDisplay").asText(null);
-                        long likeCount = cs.path("likeCount").asLong(0);
-                        String publishedAt = cs.path("publishedAt").asText(null);
-                        Integer prediction=0;
-
-                        if (commentId != null) {
-                            comments.add(new CommentDto(
-                                commentId,
-                                author,
-                                text,
-                                likeCount,
-                                publishedAt,
-                                prediction
-                            ));
-                        }
-                    }
-                }
-
-                pageToken = croot.path("nextPageToken").isMissingNode() ? null : croot.path("nextPageToken").asText(null);
-                remain -= pageSize;
-
-                if (pageToken == null) 
-                	break;
-            }
-
+            //댓글 수집 (최대 fetchCount)
+            List<CommentDto> comments = fetchComments(videoId, fetchCount);
             int beforeBot = comments.size();
-            
-            
 
-            //AI Sender 호출 (FastAPI와 연동)
-            SendResult sendResult;
-            try {
-            	sendResult = aiSender.send(comments);
-            }
-            catch(WebClientResponseException | WebClientRequestException | TimeoutException e) {
-            	throw new ExternalServiceException("AI 서버 호출 실패: " + e.getMessage(), e);
-            }
-            catch (Exception e) {
-                throw new VideoAnalysisException("AI 분류 처리 중 오류", e);
-            }
+            //AI 호출 (AiSender가 감정별 top-10만 comments로 돌려줌)
+            SendResult sendResult = aiSender.send(comments);
 
-            //감정 통계 계산
+            // 통계
             ZoneId zone = ZoneId.of("Asia/Seoul");
-            StatsDto stats = buildStats(sendResult.comments(), zone);
-
+            StatsDto stats = buildStats(comments, zone);
             int afterBot = sendResult.comments().size();
-          
+
             return new VideoAnalysisResponse(
-                    meta,
-                    sendResult.comments(),
-                    sendResult.topKeywordGlobal(),
-                    stats,
-                    beforeBot,           
-                    afterBot,
-                    sendResult.POSITIVE(),
-                    sendResult.NEUTRAL(),
-                    sendResult.NEGATIVE()
+                meta,
+                sendResult.comments(),
+                sendResult.topKeywordGlobal(),
+                stats,
+                beforeBot,
+                afterBot,
+                sendResult.POSITIVE(),
+                sendResult.NEUTRAL(),
+                sendResult.NEGATIVE()
             );
-            
         }
         catch (WebClientResponseException e) { // HTTP status 있는 오류
             throw new ExternalServiceException("YouTube 응답 오류: " + e.getRawStatusCode() + " " + e.getStatusText(), e);
@@ -195,14 +128,80 @@ public class VideoService {
         catch (ExternalServiceException e) {
             throw e; // 그대로 502/504로 올림
         }
-        catch(CommentsDisabledException e) {
-        	throw e;
+        catch (CommentsDisabledException e) {
+            throw e; //댓글이 막힌 영상 403에러로
         }
         catch (Exception e) {
             // 파싱/로직 등 나머지 내부 오류
             throw new VideoAnalysisException("영상 분석 중 내부 오류", e);
         }
     }
+
+    /** YouTube commentThreads 페이징 수집 */
+    private List<CommentDto> fetchComments(String videoId, int maxCount) {
+        List<CommentDto> comments = new ArrayList<>();
+        String pageToken = null;
+        int remain = Math.max(0, maxCount);
+
+        while (remain > 0) {
+            int pageSize = Math.min(100, remain);
+            final String token = pageToken;
+
+            String ctJson = yt.get()
+                .uri(b -> b.path("/commentThreads")
+                    .queryParam("part", "snippet,replies")
+                    .queryParam("textFormat", "plainText")
+                    .queryParam("order", "time")
+                    .queryParam("maxResults", pageSize)
+                    .queryParam("videoId", videoId)
+                    .queryParam("key", apikey)
+                    .queryParamIfPresent("pageToken", Optional.ofNullable(token))
+                    .build())
+                .retrieve()
+                .onStatus(status -> status.value() == 403, res ->
+                    Mono.error(new CommentsDisabledException("댓글 비활성화 영상: " + videoId)))
+                .onStatus(HttpStatusCode::is4xxClientError, res ->
+                    res.bodyToMono(String.class).map(body ->
+                        new ExternalServiceException("YouTube 4xx on /commentThreads: " + body, null)))
+                .onStatus(HttpStatusCode::is5xxServerError, res ->
+                    res.bodyToMono(String.class).map(body ->
+                        new ExternalServiceException("YouTube 5xx on /commentThreads: " + body, null)))
+                .bodyToMono(String.class)
+                .block();
+
+            try {
+                JsonNode croot = mapper.readTree(ctJson);
+                JsonNode citems = croot.path("items");
+
+                if (citems.isArray()) {
+                    for (JsonNode it : citems) {
+                        JsonNode top = it.path("snippet").path("topLevelComment");
+                        String commentId = top.path("id").asText();
+                        JsonNode cs = top.path("snippet");
+                        String author = cs.path("authorDisplayName").asText(null);
+                        String text = cs.path("textDisplay").asText(null);
+                        long likeCount = cs.path("likeCount").asLong(0);
+                        String publishedAt = cs.path("publishedAt").asText(null);
+                        Integer prediction = 0;
+
+                        if (commentId != null) {
+                            comments.add(new CommentDto(commentId, author, text, likeCount, publishedAt, prediction));
+                        }
+                    }
+                }
+
+                pageToken = croot.path("nextPageToken").isMissingNode() ? null : croot.path("nextPageToken").asText(null);
+            } catch (IOException e) {
+                throw new VideoAnalysisException("댓글 JSON 파싱 오류", e);
+            }
+
+            remain -= pageSize;
+            if (pageToken == null) break;
+        }
+        return comments;
+    }
+
+   
     
     private VideoMeta parseVideoMeta(String videoJson) {
         try {
@@ -220,15 +219,16 @@ public class VideoService {
             String channelTitle = snippet.path("channelTitle").asText(null);
             String publishedAt  = snippet.path("publishedAt").asText(null);
             String thumbnails = snippet.path("thumbnails").path("high").path("url").asText(null);
+            String description=snippet.path("description").asText(null);
 
             Long viewCount    = stats.path("viewCount").isMissingNode() ? null : stats.path("viewCount").asLong();
             Long likeCount    = stats.path("likeCount").isMissingNode() ? null : stats.path("likeCount").asLong();
             Long commentCount = stats.path("commentCount").isMissingNode() ? null : stats.path("commentCount").asLong();
 
-            return new VideoMeta(id,title, channelId, channelTitle, publishedAt, viewCount, likeCount, commentCount,thumbnails);
+            return new VideoMeta(id,title, channelId, channelTitle, publishedAt, viewCount, likeCount, commentCount,thumbnails,description);
         } catch (Exception e) {
             log.error("video meta parse error", e);
-            return new VideoMeta(null ,null, null, null, null, null, null, null,null);
+            return new VideoMeta(null ,null, null, null, null, null, null, null,null,null);
         }
     }
 
@@ -300,6 +300,8 @@ public class VideoService {
         for (Sentiment s : Sentiment.values()) topLikes.put(s, Integer.MIN_VALUE);
 
         for (CommentDto c : comments) {
+        	Integer p = c.getPrediction();
+            if (p == null) continue;
             // 1) 감정 매핑 (AI 기준: 0=부정, 1=중립, 2=긍정)
             Sentiment s = Sentiment.fromPrediction(c.getPrediction());
             stats.incTotal(s);

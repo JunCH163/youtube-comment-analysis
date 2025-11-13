@@ -131,12 +131,12 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(CommentsDisabledException.class)
 	public ResponseEntity<ApiErrorResponse> handleCommentsDisabled(CommentsDisabledException ex, HttpServletRequest req) {
 	    var body = ApiErrorResponse.of(
-	        HttpStatus.UNPROCESSABLE_ENTITY.value(),  // 422
+	        HttpStatus.FORBIDDEN.value(),  // 403
 	        "Comments Disabled",
 	        ex.getMessage(),
 	        req.getRequestURI(),
 	        traceId()
 	    );
-	    return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(body);
+	    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
 	}
 }

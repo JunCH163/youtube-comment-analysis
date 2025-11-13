@@ -9,6 +9,7 @@ public record VideoMeta(
 	    Long viewCount,
 	    Long likeCount,
 	    Long commentCount,
-	    String thumbnails) {
+	    String thumbnails,
+	    String description) {
 
 }

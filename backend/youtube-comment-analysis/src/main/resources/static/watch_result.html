@@ -381,7 +381,9 @@
         <div class="content-wrapper" id="contentWrapper">
             <!-- 영상 정보 -->
             <div class="video-info clearfix">
-                <div class="video-thumbnail"></div>
+                <div class="video-thumbnail">
+                	<img alt="" src="" id="video-thumbnail" class="video-thumbnail">
+                </div>
                 <div class="video-details">
                     <h2 id="videoTitle">영상 제목을 불러오는 중...</h2>
                     <p id="videoDescription">영상 설명을 불러오는 중...</p>
@@ -519,7 +521,17 @@
                     safeGet(analysisData, 'video.title', '제목 없음');
                 document.getElementById('videoDescription').textContent = 
                     safeGet(analysisData, 'video.description', '설명 없음');
-            
+                
+                const thumbImg = document.getElementById('video-thumbnail');
+                const thumbUrl = safeGet(analysisData, 'video.thumbnails', null);
+                
+                if (thumbUrl) {
+                    thumbImg.src = thumbUrl;
+                    thumbImg.alt = safeGet(analysisData, 'title', '영상 썸네일');
+                } else {
+                    thumbImg.style.display = 'none'; // 썸네일 없으면 감추고 싶으면
+                }
+                
                 // 통계 업데이트 (안전하게)
                 document.getElementById('viewCount').textContent = 
                     formatNumber(safeGet(analysisData, 'video.viewCount', 0));
